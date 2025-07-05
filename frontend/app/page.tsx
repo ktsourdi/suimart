@@ -51,6 +51,26 @@ export default function Home() {
     fetchListings();
   }, []);
 
+  const handleBuy = async (listing: ListingData) => {
+    if (!currentAccount) {
+      await connect();
+      return;
+    }
+
+    const priceMist = BigInt(Math.round(listing.price * 1e9));
+    const txb = new TransactionBlock();
+    const payment = txb.splitCoins(txb.gas, [txb.pure(priceMist)]);
+    txb.moveCall({
+      target: `${PACKAGE_ID}::marketplace::buy_item<${listing.itemType}>`,
+      arguments: [txb.object(listing.listing_id), payment],
+    });
+
+    await signAndExecuteTransactionBlock({
+      transactionBlock: txb,
+      options: { showEffects: true },
+    });
+  };
+
   return (
     <main className="max-w-3xl mx-auto p-6 space-y-6">
       <header className="flex items-center justify-between">
@@ -98,25 +118,4 @@ export default function Home() {
       </section>
     </main>
   );
-}
-
-async function handleBuy(listing: ListingData) {
-  if (!currentAccount) {
-    await connect();
-    return;
-  }
-
-  const priceMist = BigInt(Math.round(listing.price * 1e9));
-  const txb = new TransactionBlock();
-  // Split gas coin to exact payment amount
-  const payment = txb.splitCoins(txb.gas, [txb.pure(priceMist)]);
-  txb.moveCall({
-    target: `${PACKAGE_ID}::marketplace::buy_item<${listing.itemType}>`,
-    arguments: [txb.object(listing.listing_id), payment],
-  });
-
-  await signAndExecuteTransactionBlock({
-    transactionBlock: txb,
-    options: { showEffects: true },
-  });
 }

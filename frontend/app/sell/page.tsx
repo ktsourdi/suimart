@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { useWalletKit } from '@mysten/wallet-kit';
@@ -14,7 +14,7 @@ export default function SellPage() {
   const { signAndExecuteTransactionBlock } = useWalletKit();
   const router = useRouter();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!objectId || !itemType || !price) return;
     try {
