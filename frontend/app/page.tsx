@@ -3,7 +3,7 @@ import { useWalletKit } from "@mysten/wallet-kit";
 import { JsonRpcProvider } from "@mysten/sui.js";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { TransactionBlock } from "@mysten/sui.js/transactions";
+import { TransactionBlock } from "@mysten/sui.js";
 import { PACKAGE_ID } from "../lib/config";
 
 const provider = new JsonRpcProvider("https://fullnode.devnet.sui.io");

@@ -1,4 +1,4 @@
-declare module "@mysten/sui.js/transactions" {
+declare module "@mysten/sui.js" {
   export class TransactionBlock {
     constructor(): void;
     gas: any;
@@ -16,9 +16,7 @@ declare module "@mysten/sui.js/transactions" {
     /** Serialize to bytes */
     build(options?: { maxSizeBytes?: number }): Promise<Uint8Array>;
   }
-}
 
-declare module "@mysten/sui.js" {
   export interface QueryEventsParams {
     MoveEventType: string;
   }
@@ -35,4 +33,9 @@ declare module "@mysten/sui.js" {
       options?: { showType?: boolean };
     }): Promise<{ data: { type: string } }>;
   }
+}
+
+// Keep backward compatibility for older import path
+declare module "@mysten/sui.js/transactions" {
+  export { TransactionBlock } from "@mysten/sui.js";
 }
