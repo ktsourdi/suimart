@@ -3,37 +3,48 @@ import { useWalletKit } from "@mysten/wallet-kit";
 import { JsonRpcProvider } from "@mysten/sui.js";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-
-// @ts-nocheck
+import { TransactionBlock } from "@mysten/sui.js/transactions";
+import { PACKAGE_ID } from "../lib/config";
 
 const provider = new JsonRpcProvider("https://fullnode.devnet.sui.io");
 
-interface ListingEvent {
+interface ListingData {
   listing_id: string;
   price: number;
   seller: string;
+  itemType: string;
 }
 
 export default function Home() {
-  const { currentAccount, connect } = useWalletKit();
-  const [listings, setListings] = useState<ListingEvent[]>([]);
+  const { currentAccount, connect, signAndExecuteTransactionBlock } = useWalletKit();
+  const [listings, setListings] = useState<ListingData[]>([]);
 
   useEffect(() => {
     async function fetchListings() {
-      // TODO: Replace with your published package ID in env var
-      const packageId = process.env.NEXT_PUBLIC_MARKETPLACE_PACKAGE ?? "";
-      if (!packageId) return;
+      if (!PACKAGE_ID) return;
 
       const events = await provider.queryEvents({
         // Filter for ListingCreated events emitted by our package
-        MoveEventType: `${packageId}::marketplace::ListingCreated`,
+        MoveEventType: `${PACKAGE_ID}::marketplace::ListingCreated`,
       });
-      // Map raw events to useful shape
-      const mapped = events.data.map((e: any) => ({
-        listing_id: e.parsedJson.listing_id,
-        price: Number(e.parsedJson.price) / 1e9, // Mist → SUI (if 10^9)
-        seller: e.parsedJson.seller,
-      }));
+      const mapped: ListingData[] = await Promise.all(
+        events.data.map(async (e: any) => {
+          const listingId = e.parsedJson.listing_id as string;
+          const obj = await provider.getObject({
+            id: listingId,
+            options: { showType: true },
+          });
+          const fullType = obj.data?.type as string;
+          // Extract the generic parameter between < and >
+          const itemType = fullType?.match(/<(.+)>/)?.[1] ?? "unknown";
+          return {
+            listing_id: listingId,
+            price: Number(e.parsedJson.price) / 1e9,
+            seller: e.parsedJson.seller,
+            itemType,
+          };
+        })
+      );
       setListings(mapped);
     }
 
@@ -76,7 +87,10 @@ export default function Home() {
               <p className="font-mono text-sm">ID: {l.listing_id}</p>
               <p className="font-semibold">Price: {l.price} SUI</p>
             </div>
-            <button className="bg-blue-500 text-white px-4 py-2 rounded">
+            <button
+              className="bg-blue-500 text-white px-4 py-2 rounded"
+              onClick={() => handleBuy(l)}
+            >
               Buy
             </button>
           </div>
@@ -84,4 +98,25 @@ export default function Home() {
       </section>
     </main>
   );
+}
+
+async function handleBuy(listing: ListingData) {
+  if (!currentAccount) {
+    await connect();
+    return;
+  }
+
+  const priceMist = BigInt(Math.round(listing.price * 1e9));
+  const txb = new TransactionBlock();
+  // Split gas coin to exact payment amount
+  const payment = txb.splitCoins(txb.gas, [txb.pure(priceMist)]);
+  txb.moveCall({
+    target: `${PACKAGE_ID}::marketplace::buy_item<${listing.itemType}>`,
+    arguments: [txb.object(listing.listing_id), payment],
+  });
+
+  await signAndExecuteTransactionBlock({
+    transactionBlock: txb,
+    options: { showEffects: true },
+  });
 }

@@ -1,9 +1,8 @@
-// @ts-nocheck
-
 import { Inter } from "next/font/google";
 import "../styles/globals.css";
 import { WalletContextProvider } from "../components/WalletProvider";
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,7 +14,7 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <html lang="en">

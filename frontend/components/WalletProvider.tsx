@@ -1,8 +1,6 @@
 'use client';
 import { ReactNode } from "react";
-import { WalletProvider, useWalletKit } from "@mysten/wallet-kit";
-
-// @ts-nocheck
+import { WalletProvider } from "@mysten/wallet-kit";
 
 export function WalletContextProvider({
   children,
