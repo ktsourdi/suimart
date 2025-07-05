@@ -1,6 +1,6 @@
 import { Inter } from "next/font/google";
 import "../styles/globals.css";
-import { WalletContextProvider } from "../components/WalletProvider";
+import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import type { ReactNode, ReactElement } from "react";
 
@@ -14,6 +14,14 @@ export const metadata: Metadata = {
 interface RootLayoutProps {
   children: ReactNode;
 }
+
+// Load the wallet-provider only in the browser so that any
+// window-specific code inside @mysten/wallet-kit never runs during
+// the Next.js build / prerendering step.
+const WalletContextProvider = dynamic(
+  () => import("../components/WalletProvider").then((m) => m.WalletContextProvider),
+  { ssr: false }
+);
 
 export default function RootLayout({ children }: RootLayoutProps): ReactElement {
   return (
