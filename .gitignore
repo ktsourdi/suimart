@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+.env
+# Move build artifacts
+build
+# OS files
+.DS_Store
+.idea/
+.vscode/
