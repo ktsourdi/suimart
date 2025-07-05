@@ -16,8 +16,15 @@ interface ListingData {
 }
 
 export default function Home() {
-  const { currentAccount, connect, signAndExecuteTransactionBlock } = useWalletKit();
+  const {
+    currentAccount,
+    connect,
+    signAndExecuteTransactionBlock,
+  } = useWalletKit();
+
   const [listings, setListings] = useState<ListingData[]>([]);
+  const [buyingId, setBuyingId] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchListings() {
@@ -51,7 +58,7 @@ export default function Home() {
     fetchListings();
   }, []);
 
-  const handleBuy = async (listing: ListingData) => {
+  const handleBuy = async (listing: ListingData): Promise<void> => {
     if (!currentAccount) {
       await connect();
       return;
@@ -65,10 +72,21 @@ export default function Home() {
       arguments: [txb.object(listing.listing_id), payment],
     });
 
-    await signAndExecuteTransactionBlock({
-      transactionBlock: txb,
-      options: { showEffects: true },
-    });
+    setBuyingId(listing.listing_id);
+    setErrorMessage(null);
+    try {
+      await signAndExecuteTransactionBlock({
+        transactionBlock: txb,
+        options: { showEffects: true },
+      });
+    } catch (err) {
+      console.error(err);
+      setErrorMessage(
+        (err as Error)?.message ?? "Transaction failed. Please try again."
+      );
+    } finally {
+      setBuyingId(null);
+    }
   };
 
   return (
@@ -108,13 +126,17 @@ export default function Home() {
               <p className="font-semibold">Price: {l.price} SUI</p>
             </div>
             <button
-              className="bg-blue-500 text-white px-4 py-2 rounded"
+              className="bg-blue-500 text-white px-4 py-2 rounded disabled:opacity-50"
               onClick={() => handleBuy(l)}
+              disabled={buyingId === l.listing_id}
             >
-              Buy
+              {buyingId === l.listing_id ? "Buying…" : "Buy"}
             </button>
           </div>
         ))}
+        {errorMessage && (
+          <p className="text-red-600 text-sm">{errorMessage}</p>
+        )}
       </section>
     </main>
   );
