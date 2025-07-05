@@ -30,4 +30,7 @@ declare module "@mysten/wallet-kit" {
   }: {
     children: ReactNode;
   }): JSX.Element;
+
+  /** Alias export – WalletKitProvider is same as WalletProvider in runtime releases */
+  export const WalletKitProvider: typeof WalletProvider;
 }
