@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { TransactionBlock } from '@mysten/sui.js/transactions';
 import { useWalletKit } from '@mysten/wallet-kit';
@@ -45,7 +45,9 @@ export default function SellPage() {
             type="text"
             className="w-full border rounded p-2"
             value={objectId}
-            onChange={(e) => setObjectId(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setObjectId(e.target.value)
+            }
             placeholder="0xabc…"
             required
           />
@@ -56,7 +58,9 @@ export default function SellPage() {
             type="text"
             className="w-full border rounded p-2"
             value={itemType}
-            onChange={(e) => setItemType(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setItemType(e.target.value)
+            }
             required
           />
         </div>
@@ -67,7 +71,9 @@ export default function SellPage() {
             step="0.000001"
             className="w-full border rounded p-2"
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setPrice(e.target.value)
+            }
             required
           />
         </div>

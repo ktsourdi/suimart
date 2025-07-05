@@ -12,3 +12,22 @@ declare module "@mysten/sui.js/transactions" {
     }): void;
   }
 }
+
+declare module "@mysten/sui.js" {
+  export interface QueryEventsParams {
+    MoveEventType: string;
+  }
+
+  export interface JsonRpcProviderOptions {
+    url?: string;
+  }
+
+  export class JsonRpcProvider {
+    constructor(urlOrOptions: string | JsonRpcProviderOptions);
+    queryEvents(params: QueryEventsParams): Promise<{ data: any[] }>;
+    getObject(params: {
+      id: string;
+      options?: { showType?: boolean };
+    }): Promise<{ data: { type: string } }>;
+  }
+}
