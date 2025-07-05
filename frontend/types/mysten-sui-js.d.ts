@@ -10,6 +10,11 @@ declare module "@mysten/sui.js/transactions" {
       typeArguments?: string[];
       arguments: any[];
     }): void;
+    makeMoveVec(types: string[] | null, objects: any[]): any;
+    setGasBudget(budget: number): void;
+    setSender(address: string): void;
+    /** Serialize to bytes */
+    build(options?: { maxSizeBytes?: number }): Promise<Uint8Array>;
   }
 }
 

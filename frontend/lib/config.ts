@@ -34,13 +34,16 @@ const { NEXT_PUBLIC_MARKETPLACE_PACKAGE, NEXT_PUBLIC_SUI_NETWORK } = getEnv();
 
 export const PACKAGE_ID: string = NEXT_PUBLIC_MARKETPLACE_PACKAGE;
 
-// Default to devnet when not provided
-const resolvedNetwork = (NEXT_PUBLIC_SUI_NETWORK ?? "devnet") as string;
+function isSuiNetwork(value: string): value is SuiNetwork {
+  return (ALLOWED_NETWORKS as readonly string[]).includes(value);
+}
 
-if (!ALLOWED_NETWORKS.includes(resolvedNetwork as SuiNetwork)) {
+const resolvedNetworkRaw = NEXT_PUBLIC_SUI_NETWORK ?? "devnet";
+
+if (!isSuiNetwork(resolvedNetworkRaw)) {
   throw new Error(
-    `Invalid NEXT_PUBLIC_SUI_NETWORK: ${resolvedNetwork}. Must be one of ${ALLOWED_NETWORKS.join(", ")}`
+    `Invalid NEXT_PUBLIC_SUI_NETWORK: ${resolvedNetworkRaw}. Must be one of ${ALLOWED_NETWORKS.join(", ")}`
   );
 }
 
-export const SUI_NETWORK: SuiNetwork = resolvedNetwork as SuiNetwork;
+export const SUI_NETWORK: SuiNetwork = resolvedNetworkRaw;
