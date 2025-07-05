@@ -10,3 +10,5 @@ export function WalletContextProvider({ children }: WalletContextProviderProps) 
   // WalletKitProvider wraps the app and provides wallet context/hooks.
   return <WalletKitProvider>{children}</WalletKitProvider>;
 }
+
+export default WalletContextProvider;

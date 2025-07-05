@@ -19,7 +19,7 @@ interface RootLayoutProps {
 // window-specific code inside @mysten/wallet-kit never runs during
 // the Next.js build / prerendering step.
 const WalletContextProvider = dynamic(
-  () => import("../components/WalletProvider").then((m) => m.WalletContextProvider),
+  () => import("../components/WalletProvider"),
   { ssr: false }
 );
 
