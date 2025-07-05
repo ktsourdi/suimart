@@ -2,7 +2,7 @@ import { Inter } from "next/font/google";
 import "../styles/globals.css";
 import { WalletContextProvider } from "../components/WalletProvider";
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
+import type { ReactNode, ReactElement } from "react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -11,11 +11,11 @@ export const metadata: Metadata = {
   description: "Peer-to-peer marketplace on Sui blockchain",
 };
 
-export default function RootLayout({
-  children,
-}: {
+interface RootLayoutProps {
   children: ReactNode;
-}) {
+}
+
+export default function RootLayout({ children }: RootLayoutProps): ReactElement {
   return (
     <html lang="en">
       <body className={inter.className}>
