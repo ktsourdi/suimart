@@ -17,14 +17,12 @@
     "autoprefixer": "^10.4.14",
     "postcss": "^8.4.21",
     "@mysten/sui.js": "^0.36.0",
-    "@mysten/wallet-adapter-react": "^0.9.0",
-    "@mysten/wallet-kit": "^0.9.0"
+    "@mysten/wallet-kit": "^0.8.0"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
     "@types/node": "^20.11.19",
     "@types/react": "^18.2.41",
-    "@types/react-dom": "^18.2.17",
-    "@types/next": "^13.1.6"
+    "@types/react-dom": "^18.2.17"
   }
 }
