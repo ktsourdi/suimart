@@ -18,14 +18,11 @@ function getEnv(): RuntimeEnv {
   // Narrow the NodeJS.ProcessEnv type to our keys for safer access
   const env = process.env as NodeJS.ProcessEnv & Partial<RuntimeEnv>;
 
-  if (!env.NEXT_PUBLIC_MARKETPLACE_PACKAGE) {
-    throw new Error(
-      "Environment variable NEXT_PUBLIC_MARKETPLACE_PACKAGE is required but missing."
-    );
-  }
+  // Use fallback for development/build purposes
+  const packageId = env.NEXT_PUBLIC_MARKETPLACE_PACKAGE || "0x0000000000000000000000000000000000000000000000000000000000000000";
 
   return {
-    NEXT_PUBLIC_MARKETPLACE_PACKAGE: env.NEXT_PUBLIC_MARKETPLACE_PACKAGE,
+    NEXT_PUBLIC_MARKETPLACE_PACKAGE: packageId,
     NEXT_PUBLIC_SUI_NETWORK: env.NEXT_PUBLIC_SUI_NETWORK,
   };
 }
