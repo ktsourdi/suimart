@@ -3,6 +3,7 @@ import "../styles/globals.css";
 import dynamic from "next/dynamic";
 import type { Metadata } from "next";
 import type { ReactNode, ReactElement } from "react";
+import ErrorBoundary from "../components/ErrorBoundary";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,7 +28,9 @@ export default function RootLayout({ children }: RootLayoutProps): ReactElement 
   return (
     <html lang="en">
       <body className={inter.className}>
-        <WalletContextProvider>{children}</WalletContextProvider>
+        <ErrorBoundary>
+          <WalletContextProvider>{children}</WalletContextProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
