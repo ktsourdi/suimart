@@ -6,8 +6,6 @@ import Link from "next/link";
 import { TransactionBlock } from "@mysten/sui.js";
 import { PACKAGE_ID } from "../lib/config";
 
-const provider = new JsonRpcProvider("https://fullnode.devnet.sui.io");
-
 interface ListingData {
   listing_id: string;
   price: number;
@@ -25,38 +23,56 @@ export default function Home() {
   const [listings, setListings] = useState<ListingData[]>([]);
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [provider, setProvider] = useState<JsonRpcProvider | null>(null);
+
+  // Initialize provider only on client side
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const rpcProvider = new JsonRpcProvider("https://fullnode.devnet.sui.io");
+      setProvider(rpcProvider);
+    }
+  }, []);
 
   useEffect(() => {
     async function fetchListings() {
-      if (!PACKAGE_ID) return;
+      // Skip fetching if provider is not initialized or PACKAGE_ID is not set
+      if (!provider || !PACKAGE_ID || PACKAGE_ID === "0x0000000000000000000000000000000000000000000000000000000000000000") {
+        console.log("Provider not initialized or PACKAGE_ID not configured, skipping listings fetch");
+        return;
+      }
 
-      const events = await provider.queryEvents({
-        // Filter for ListingCreated events emitted by our package
-        MoveEventType: `${PACKAGE_ID}::marketplace::ListingCreated`,
-      });
-      const mapped: ListingData[] = await Promise.all(
-        events.data.map(async (e: any) => {
-          const listingId = e.parsedJson.listing_id as string;
-          const obj = await provider.getObject({
-            id: listingId,
-            options: { showType: true },
-          });
-          const fullType = obj.data?.type as string;
-          // Extract the generic parameter between < and >
-          const itemType = fullType?.match(/<(.+)>/)?.[1] ?? "unknown";
-          return {
-            listing_id: listingId,
-            price: Number(e.parsedJson.price) / 1e9,
-            seller: e.parsedJson.seller,
-            itemType,
-          };
-        })
-      );
-      setListings(mapped);
+      try {
+        const events = await provider.queryEvents({
+          // Filter for ListingCreated events emitted by our package
+          MoveEventType: `${PACKAGE_ID}::marketplace::ListingCreated`,
+        });
+        const mapped: ListingData[] = await Promise.all(
+          events.data.map(async (e: any) => {
+            const listingId = e.parsedJson.listing_id as string;
+            const obj = await provider.getObject({
+              id: listingId,
+              options: { showType: true },
+            });
+            const fullType = obj.data?.type as string;
+            // Extract the generic parameter between < and >
+            const itemType = fullType?.match(/<(.+)>/)?.[1] ?? "unknown";
+            return {
+              listing_id: listingId,
+              price: Number(e.parsedJson.price) / 1e9,
+              seller: e.parsedJson.seller,
+              itemType,
+            };
+          })
+        );
+        setListings(mapped);
+      } catch (error) {
+        console.error("Error fetching listings:", error);
+        setErrorMessage("Failed to fetch listings. Please check your configuration.");
+      }
     }
 
     fetchListings();
-  }, []);
+  }, [provider]);
 
   const handleBuy = async (listing: ListingData): Promise<void> => {
     if (!currentAccount) {
@@ -115,7 +131,15 @@ export default function Home() {
       </Link>
 
       <section className="space-y-4">
-        {listings.length === 0 && <p>No active listings.</p>}
+        {PACKAGE_ID === "0x0000000000000000000000000000000000000000000000000000000000000000" && (
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+            <p className="font-semibold">Configuration Required</p>
+            <p className="text-sm">
+              Please set the NEXT_PUBLIC_MARKETPLACE_PACKAGE environment variable to your deployed package ID.
+            </p>
+          </div>
+        )}
+        {listings.length === 0 && !errorMessage && <p>No active listings.</p>}
         {listings.map((l) => (
           <div
             key={l.listing_id}
