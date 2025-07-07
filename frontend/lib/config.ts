@@ -9,41 +9,35 @@ export const ALLOWED_NETWORKS = [
 
 export type SuiNetwork = (typeof ALLOWED_NETWORKS)[number];
 
-interface RuntimeEnv {
-  NEXT_PUBLIC_MARKETPLACE_PACKAGE: string;
-  NEXT_PUBLIC_SUI_NETWORK?: string;
-}
+// -----------------------------
+// Environment helpers
+// -----------------------------
 
-function getEnv(): RuntimeEnv {
-  // Narrow the NodeJS.ProcessEnv type to our keys for safer access
-  const env = process.env as NodeJS.ProcessEnv & Partial<RuntimeEnv>;
+/**
+ * Next.js replaces every occurence of `process.env.NEXT_PUBLIC_*` with the
+ * literal value at build-time. In a browser bundle the global `process` object
+ * does **not** exist, so we have to be careful never to access it dynamically
+ * (e.g. `Object.keys(process.env)` or similar).
+ *
+ * By referencing each variable directly we let Next.js inline the value and we
+ * stay compatible with both server and client runtimes.
+ */
 
-  if (!env.NEXT_PUBLIC_MARKETPLACE_PACKAGE) {
-    throw new Error(
-      "Environment variable NEXT_PUBLIC_MARKETPLACE_PACKAGE is required but missing."
-    );
-  }
+// Marketplace Move package published on chain (public, safe to expose)
+export const PACKAGE_ID: string =
+  process.env.NEXT_PUBLIC_MARKETPLACE_PACKAGE ?? "";
 
-  return {
-    NEXT_PUBLIC_MARKETPLACE_PACKAGE: env.NEXT_PUBLIC_MARKETPLACE_PACKAGE,
-    NEXT_PUBLIC_SUI_NETWORK: env.NEXT_PUBLIC_SUI_NETWORK,
-  };
-}
-
-const { NEXT_PUBLIC_MARKETPLACE_PACKAGE, NEXT_PUBLIC_SUI_NETWORK } = getEnv();
-
-export const PACKAGE_ID: string = NEXT_PUBLIC_MARKETPLACE_PACKAGE;
-
-function isSuiNetwork(value: string): value is SuiNetwork {
-  return (ALLOWED_NETWORKS as readonly string[]).includes(value);
-}
-
-const resolvedNetworkRaw = NEXT_PUBLIC_SUI_NETWORK ?? "devnet";
-
-if (!isSuiNetwork(resolvedNetworkRaw)) {
+if (!PACKAGE_ID) {
   throw new Error(
-    `Invalid NEXT_PUBLIC_SUI_NETWORK: ${resolvedNetworkRaw}. Must be one of ${ALLOWED_NETWORKS.join(", ")}`
+    "Environment variable NEXT_PUBLIC_MARKETPLACE_PACKAGE is required but missing."
   );
 }
 
-export const SUI_NETWORK: SuiNetwork = resolvedNetworkRaw;
+// Selected Sui network – falls back to devnet.
+const RAW_NETWORK = process.env.NEXT_PUBLIC_SUI_NETWORK ?? "devnet";
+
+export const SUI_NETWORK: SuiNetwork = ALLOWED_NETWORKS.includes(
+  RAW_NETWORK as SuiNetwork
+)
+  ? (RAW_NETWORK as SuiNetwork)
+  : "devnet";
