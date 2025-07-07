@@ -1,12 +1,12 @@
 'use client';
 import { useWalletKit } from "@mysten/wallet-kit";
-import { JsonRpcProvider, devnetConnection } from "@mysten/sui.js";
+import { JsonRpcProvider } from "@mysten/sui.js";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { TransactionBlock } from "@mysten/sui.js";
 import { PACKAGE_ID } from "../lib/config";
 
-const provider = new JsonRpcProvider(devnetConnection);
+const provider = new JsonRpcProvider("https://fullnode.devnet.sui.io");
 
 interface ListingData {
   listing_id: string;
@@ -32,9 +32,7 @@ export default function Home() {
 
       const events = await provider.queryEvents({
         // Filter for ListingCreated events emitted by our package
-        query: {
-          MoveEventType: `${PACKAGE_ID}::marketplace::ListingCreated`,
-        },
+        MoveEventType: `${PACKAGE_ID}::marketplace::ListingCreated`,
       });
       const mapped: ListingData[] = await Promise.all(
         events.data.map(async (e: any) => {

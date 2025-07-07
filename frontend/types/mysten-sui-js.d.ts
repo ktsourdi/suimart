@@ -18,11 +18,7 @@ declare module "@mysten/sui.js" {
   }
 
   export interface QueryEventsParams {
-    query: {
-      MoveEventType: string;
-    };
-    cursor?: any;
-    limit?: number;
+    MoveEventType: string;
   }
 
   export interface JsonRpcProviderOptions {
@@ -37,9 +33,6 @@ declare module "@mysten/sui.js" {
       options?: { showType?: boolean };
     }): Promise<{ data: { type: string } }>;
   }
-
-  /** Connection preset for Sui devnet */
-  export const devnetConnection: any;
 }
 
 // Keep backward compatibility for older import path
