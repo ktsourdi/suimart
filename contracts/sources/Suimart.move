@@ -1,9 +1,11 @@
 module suimart::marketplace {
-    use sui::object::{Self, UID};
+    use sui::object::{Self, UID, ID};
     use sui::transfer;
     use sui::balance::{Self, Balance};
     use sui::tx_context::{Self, TxContext};
     use sui::event;
+    use sui::sui::SUI;
+    use sui::coin::{Self, Coin};
 
     /// Listing for a generic object `T`.
     struct Listing<T: key + store> has key {
@@ -32,41 +34,47 @@ module suimart::marketplace {
     }
 
     /// List an item at a fixed `price` (in Mist).
-    public fun list_item<T: key + store>(item: T, price: u64, ctx: &mut TxContext): Listing<T> {
+    public entry fun list_item<T: key + store>(item: T, price: u64, ctx: &mut TxContext) {
         let listing = Listing {
             id: object::new(ctx),
             item,
             seller: tx_context::sender(ctx),
             price,
         };
-        event::emit<ListingCreated>(ListingCreated {
-            listing_id: object::id(&listing.id),
+        let listing_id = object::id(&listing);
+        event::emit(ListingCreated {
+            listing_id,
             price,
             seller: tx_context::sender(ctx),
         });
-        listing
+        transfer::share_object(listing);
     }
 
     /// Buy a listed item providing the exact `price` as `payment`.
-    public fun buy_item<T: key + store>(listing: &mut Listing<T>, payment: Balance<SUI>, ctx: &mut TxContext): T {
-        assert!(payment.value == listing.price, 0);
-        balance::transfer(payment, listing.seller);
-        event::emit<ListingPurchased>(ListingPurchased {
-            listing_id: object::id(&listing.id),
+    public entry fun buy_item<T: key + store>(listing: Listing<T>, payment: Coin<SUI>, ctx: &mut TxContext) {
+        let Listing { id, item, seller, price } = listing;
+        assert!(coin::value(&payment) == price, 0);
+        
+        transfer::public_transfer(payment, seller);
+        event::emit(ListingPurchased {
+            listing_id: object::uid_to_inner(&id),
             buyer: tx_context::sender(ctx),
         });
-        let item = listing.item;
-        // Destroy the listing object – it's no longer needed
-        transfer::public_destroy_object<Listing<T>>(listing, ctx);
-        item
+        
+        transfer::public_transfer(item, tx_context::sender(ctx));
+        object::delete(id);
     }
 
     /// Cancel a listing and return the item to the seller.
-    public fun cancel_listing<T: key + store>(listing: &mut Listing<T>, ctx: &mut TxContext): T {
-        assert!(tx_context::sender(ctx) == listing.seller, 1);
-        event::emit<ListingCancelled>(ListingCancelled { listing_id: object::id(&listing.id) });
-        let item = listing.item;
-        transfer::public_destroy_object<Listing<T>>(listing, ctx);
-        item
+    public entry fun cancel_listing<T: key + store>(listing: Listing<T>, ctx: &mut TxContext) {
+        let Listing { id, item, seller, price: _ } = listing;
+        assert!(tx_context::sender(ctx) == seller, 1);
+        
+        event::emit(ListingCancelled { 
+            listing_id: object::uid_to_inner(&id) 
+        });
+        
+        transfer::public_transfer(item, seller);
+        object::delete(id);
     }
 }
