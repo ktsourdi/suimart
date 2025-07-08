@@ -1,33 +1,32 @@
-import { Inter } from "next/font/google";
-import "../styles/globals.css";
-import dynamic from "next/dynamic";
 import type { Metadata } from "next";
-import type { ReactNode, ReactElement } from "react";
+import { Inter } from "next/font/google";
+import { ThemeProvider } from "@/components/ThemeProvider";
+import "../styles/globals.css";
+import WalletProvider from "@/components/WalletProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Suimart",
-  description: "Peer-to-peer marketplace on Sui blockchain",
+  description: "A simple marketplace for Sui NFTs",
 };
 
-interface RootLayoutProps {
-  children: ReactNode;
-}
-
-// Load the wallet-provider only in the browser so that any
-// window-specific code inside @mysten/wallet-kit never runs during
-// the Next.js build / prerendering step.
-const WalletContextProvider = dynamic(
-  () => import("../components/WalletProvider"),
-  { ssr: false }
-);
-
-export default function RootLayout({ children }: RootLayoutProps): ReactElement {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <WalletContextProvider>{children}</WalletContextProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <WalletProvider>{children}</WalletProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
