@@ -9,38 +9,21 @@ export const ALLOWED_NETWORKS = [
 
 export type SuiNetwork = (typeof ALLOWED_NETWORKS)[number];
 
-interface RuntimeEnv {
-  NEXT_PUBLIC_MARKETPLACE_PACKAGE: string;
-  NEXT_PUBLIC_SUI_NETWORK?: string;
-}
+// Directly reference the public environment variables. Next.js will replace these
+// at build time, so no `process` global access is required in the browser bundle.
+// Fallbacks are provided for robustness during local development or when the
+// variable is not yet configured.
+export const PACKAGE_ID: string =
+  process.env.NEXT_PUBLIC_MARKETPLACE_PACKAGE ??
+  "0x0000000000000000000000000000000000000000000000000000000000000000";
 
-function getEnv(): RuntimeEnv {
-  // Narrow the NodeJS.ProcessEnv type to our keys for safer access
-  const env = process.env as NodeJS.ProcessEnv & Partial<RuntimeEnv>;
+const rawNetwork =
+  (process.env.NEXT_PUBLIC_SUI_NETWORK as string | undefined) ?? "devnet";
 
-  // Use fallback for development/build purposes
-  const packageId = env.NEXT_PUBLIC_MARKETPLACE_PACKAGE || "0x0000000000000000000000000000000000000000000000000000000000000000";
-
-  return {
-    NEXT_PUBLIC_MARKETPLACE_PACKAGE: packageId,
-    NEXT_PUBLIC_SUI_NETWORK: env.NEXT_PUBLIC_SUI_NETWORK,
-  };
-}
-
-const { NEXT_PUBLIC_MARKETPLACE_PACKAGE, NEXT_PUBLIC_SUI_NETWORK } = getEnv();
-
-export const PACKAGE_ID: string = NEXT_PUBLIC_MARKETPLACE_PACKAGE;
-
-function isSuiNetwork(value: string): value is SuiNetwork {
-  return (ALLOWED_NETWORKS as readonly string[]).includes(value);
-}
-
-const resolvedNetworkRaw = NEXT_PUBLIC_SUI_NETWORK ?? "devnet";
-
-if (!isSuiNetwork(resolvedNetworkRaw)) {
+if (!ALLOWED_NETWORKS.includes(rawNetwork as SuiNetwork)) {
   throw new Error(
-    `Invalid NEXT_PUBLIC_SUI_NETWORK: ${resolvedNetworkRaw}. Must be one of ${ALLOWED_NETWORKS.join(", ")}`
+    `Invalid NEXT_PUBLIC_SUI_NETWORK: ${rawNetwork}. Must be one of ${ALLOWED_NETWORKS.join(", ")}`
   );
 }
 
-export const SUI_NETWORK: SuiNetwork = resolvedNetworkRaw;
+export const SUI_NETWORK: SuiNetwork = rawNetwork as SuiNetwork;
