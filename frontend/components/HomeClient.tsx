@@ -3,7 +3,7 @@ import { useWalletKit } from "@mysten/wallet-kit";
 import { JsonRpcProvider, TransactionBlock } from "@mysten/sui.js";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { PACKAGE_ID } from "../lib/config";
+import { PACKAGE_ID, SUI_NETWORK } from "../lib/config";
 
 interface ListingData {
   listing_id: string;
@@ -26,8 +26,11 @@ export default function HomeClient() {
 
   // Initialize provider only on client side
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const rpcProvider = new JsonRpcProvider("https://fullnode.devnet.sui.io");
+    if (typeof window !== "undefined") {
+      const rpcProvider = new JsonRpcProvider({
+        fullnode: `https://fullnode.${SUI_NETWORK}.sui.io`,
+        websocket: `wss://fullnode.${SUI_NETWORK}.sui.io`,
+      } as any);
       setProvider(rpcProvider);
     }
   }, []);
