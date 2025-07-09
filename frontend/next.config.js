@@ -2,8 +2,7 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // Force static export for Vercel deployment
-  output: 'export',
+  // Removed static export for better compatibility with dynamic features
   trailingSlash: true,
   images: {
     unoptimized: true,
