@@ -14,10 +14,36 @@ interface ListingData {
   price: number;
   seller: string;
   itemType: string;
+  title?: string;
+  description?: string;
+  category?: string;
   createdAt?: number;
+  updatedAt?: number;
+  views?: number;
+  favorites?: number;
+  isAuction?: boolean;
+  auctionEndTime?: number;
+  currentBid?: number;
+  highestBidder?: string;
 }
 
-type SortOption = 'price-asc' | 'price-desc' | 'newest' | 'oldest';
+type SortOption = 'price-asc' | 'price-desc' | 'newest' | 'oldest' | 'popular' | 'ending-soon';
+type ViewMode = 'grid' | 'list';
+
+// Categories for the marketplace
+const CATEGORIES = [
+  'All',
+  'NFTs',
+  'Gaming',
+  'Art',
+  'Collectibles',
+  'Music',
+  'Sports',
+  'Technology',
+  'Fashion',
+  'Real Estate',
+  'Other'
+];
 
 // Loading skeleton component
 const ListingSkeleton = () => (
@@ -97,6 +123,10 @@ export default function HomeClient() {
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
   const [sortOption, setSortOption] = useState<SortOption>('newest');
   const [showOnlyMyListings, setShowOnlyMyListings] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [viewMode, setViewMode] = useState<ViewMode>('grid');
+  const [showAuctionOnly, setShowAuctionOnly] = useState(false);
+  const [showFixedPriceOnly, setShowFixedPriceOnly] = useState(false);
 
   // Initialize provider only on client side
   useEffect(() => {
@@ -145,7 +175,17 @@ export default function HomeClient() {
               price: Number(e.parsedJson.price) / 1e9,
               seller: e.parsedJson.seller,
               itemType,
+              title: e.parsedJson.title || 'Untitled Item',
+              description: e.parsedJson.description || '',
+              category: e.parsedJson.category || 'Other',
               createdAt: e.timestampMs ? Number(e.timestampMs) : Date.now(),
+              updatedAt: e.timestampMs ? Number(e.timestampMs) : Date.now(),
+              views: 0,
+              favorites: 0,
+              isAuction: e.parsedJson.is_auction || false,
+              auctionEndTime: e.parsedJson.auction_end_time ? Number(e.parsedJson.auction_end_time) : undefined,
+              currentBid: e.parsedJson.current_bid ? Number(e.parsedJson.current_bid) / 1e9 : undefined,
+              highestBidder: e.parsedJson.highest_bidder,
             };
           } catch (error) {
             console.error(`Error fetching listing ${listingId}:`, error);
@@ -178,8 +218,15 @@ export default function HomeClient() {
       filtered = filtered.filter(listing =>
         listing.listing_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         listing.itemType.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        listing.seller.toLowerCase().includes(searchTerm.toLowerCase())
+        listing.seller.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        listing.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
+    }
+
+    // Category filter
+    if (selectedCategory !== 'All') {
+      filtered = filtered.filter(listing => listing.category === selectedCategory);
     }
 
     // Price range filter
@@ -190,6 +237,14 @@ export default function HomeClient() {
     if (priceRange.max) {
       const maxPrice = parseFloat(priceRange.max);
       filtered = filtered.filter(listing => listing.price <= maxPrice);
+    }
+
+    // Auction/Fixed price filter
+    if (showAuctionOnly) {
+      filtered = filtered.filter(listing => listing.isAuction);
+    }
+    if (showFixedPriceOnly) {
+      filtered = filtered.filter(listing => !listing.isAuction);
     }
 
     // My listings filter
@@ -208,13 +263,20 @@ export default function HomeClient() {
           return (b.createdAt || 0) - (a.createdAt || 0);
         case 'oldest':
           return (a.createdAt || 0) - (b.createdAt || 0);
+        case 'popular':
+          return (b.favorites || 0) - (a.favorites || 0);
+        case 'ending-soon':
+          if (a.isAuction && b.isAuction) {
+            return (a.auctionEndTime || 0) - (b.auctionEndTime || 0);
+          }
+          return a.isAuction ? -1 : 1;
         default:
           return 0;
       }
     });
 
     setFilteredListings(filtered);
-  }, [listings, searchTerm, priceRange, sortOption, showOnlyMyListings, currentAccount]);
+  }, [listings, searchTerm, priceRange, sortOption, showOnlyMyListings, currentAccount, selectedCategory, showAuctionOnly, showFixedPriceOnly]);
 
   const handleBuy = async (listing: ListingData): Promise<void> => {
     if (!currentAccount) {
@@ -284,8 +346,24 @@ export default function HomeClient() {
     return listings.filter(l => l.seller === currentAccount.address).length;
   }, [listings, currentAccount]);
 
+  const formatTimeLeft = (endTime?: number) => {
+    if (!endTime) return '';
+    const now = Date.now();
+    const timeLeft = endTime * 1000 - now;
+    if (timeLeft <= 0) return 'Ended';
+    
+    const days = Math.floor(timeLeft / (1000 * 60 * 60 * 24));
+    const hours = Math.floor((timeLeft % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((timeLeft % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (days > 0) return `${days}d ${hours}h`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
+  };
+
   return (
-    <main className="max-w-6xl mx-auto p-6 space-y-6">
+    <main className="max-w-7xl mx-auto p-6 space-y-6">
+      {/* Enhanced Header */}
       <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
@@ -312,12 +390,17 @@ export default function HomeClient() {
         </div>
       </header>
 
-      {/* Actions and Stats */}
+      {/* Enhanced Actions and Stats */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex gap-4">
           <Link href="/sell">
             <Button variant="primary">
               List an Item
+            </Button>
+          </Link>
+          <Link href="/auction">
+            <Button variant="outline">
+              Create Auction
             </Button>
           </Link>
           <Button
@@ -340,12 +423,13 @@ export default function HomeClient() {
         </div>
       </div>
 
-      {/* Filters and Search */}
+      {/* Enhanced Filters and Search */}
       <Card>
-        <CardContent className="p-4 space-y-4">
+        <CardContent className="p-6 space-y-6">
+          {/* Search and Basic Filters */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <Input
-              placeholder="Search by ID, type, or seller..."
+              placeholder="Search by title, description, or seller..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="lg:col-span-2"
@@ -366,6 +450,24 @@ export default function HomeClient() {
             />
           </div>
           
+          {/* Categories */}
+          <div className="flex flex-wrap gap-2">
+            {CATEGORIES.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-3 py-1 rounded-full text-sm font-medium transition-colors ${
+                  selectedCategory === category
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
+          </div>
+          
+          {/* Advanced Filters */}
           <div className="flex flex-col sm:flex-row gap-4 justify-between">
             <div className="flex items-center gap-4">
               <select
@@ -377,7 +479,36 @@ export default function HomeClient() {
                 <option value="oldest">Oldest First</option>
                 <option value="price-asc">Price: Low to High</option>
                 <option value="price-desc">Price: High to Low</option>
+                <option value="popular">Most Popular</option>
+                <option value="ending-soon">Ending Soon</option>
               </select>
+              
+              <div className="flex items-center gap-2">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showAuctionOnly}
+                    onChange={(e) => {
+                      setShowAuctionOnly(e.target.checked);
+                      if (e.target.checked) setShowFixedPriceOnly(false);
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Auctions only</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showFixedPriceOnly}
+                    onChange={(e) => {
+                      setShowFixedPriceOnly(e.target.checked);
+                      if (e.target.checked) setShowAuctionOnly(false);
+                    }}
+                    className="rounded"
+                  />
+                  <span className="text-sm">Fixed price only</span>
+                </label>
+              </div>
               
               {currentAccount && (
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -387,14 +518,33 @@ export default function HomeClient() {
                     onChange={(e) => setShowOnlyMyListings(e.target.checked)}
                     className="rounded"
                   />
-                  <span className="text-sm">Show only my listings</span>
+                  <span className="text-sm">My listings only</span>
                 </label>
               )}
             </div>
             
-            <div className="text-sm text-muted-foreground">
-              Showing {filteredListings.length} listings
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 rounded ${viewMode === 'grid' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+                </svg>
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 rounded ${viewMode === 'list' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-600'}`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+              </button>
             </div>
+          </div>
+          
+          <div className="text-sm text-muted-foreground">
+            Showing {filteredListings.length} listings
           </div>
         </CardContent>
       </Card>
@@ -419,10 +569,10 @@ export default function HomeClient() {
         </Card>
       )}
 
-      {/* Listings Grid */}
+      {/* Enhanced Listings Grid/List */}
       <section className="space-y-4">
         {isLoading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-4"}>
             {[...Array(6)].map((_, i) => (
               <ListingSkeleton key={i} />
             ))}
@@ -442,7 +592,7 @@ export default function HomeClient() {
         )}
         
         {!isLoading && filteredListings.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className={viewMode === 'grid' ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" : "space-y-4"}>
             {filteredListings.map((listing) => (
               <Card key={listing.listing_id} className="animate-slide-up hover:shadow-lg transition-shadow">
                 <CardHeader>
@@ -451,22 +601,44 @@ export default function HomeClient() {
                       <span className="text-xs text-muted-foreground">
                         #{listing.listing_id.slice(0, 8)}...
                       </span>
-                      {listing.createdAt && (
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(listing.createdAt).toLocaleDateString()}
+                      {listing.isAuction && (
+                        <span className="text-xs bg-orange-100 text-orange-800 px-2 py-1 rounded">
+                          Auction
                         </span>
                       )}
                     </div>
-                    <CardTitle className="text-2xl font-bold">
-                      {listing.price} SUI
+                    <CardTitle className="text-lg font-bold">
+                      {listing.title || 'Untitled Item'}
                     </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <span className="text-2xl font-bold text-primary">
+                        {listing.price} SUI
+                      </span>
+                      {listing.isAuction && listing.auctionEndTime && (
+                        <span className="text-xs text-muted-foreground">
+                          Ends: {formatTimeLeft(listing.auctionEndTime)}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  {listing.description && (
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {listing.description}
+                    </p>
+                  )}
+                  
+                  <div className="space-y-1 text-sm">
+                    <p className="text-muted-foreground">Category:</p>
+                    <p className="font-medium">{listing.category || 'Other'}</p>
+                  </div>
+                  
                   <div className="space-y-1 text-sm">
                     <p className="text-muted-foreground">Type:</p>
                     <p className="font-mono text-xs break-all">{listing.itemType}</p>
                   </div>
+                  
                   <div className="space-y-1 text-sm">
                     <p className="text-muted-foreground">Seller:</p>
                     <p className="font-mono text-xs">
@@ -476,6 +648,13 @@ export default function HomeClient() {
                       )}
                     </p>
                   </div>
+                  
+                  {listing.isAuction && listing.currentBid && (
+                    <div className="space-y-1 text-sm">
+                      <p className="text-muted-foreground">Current Bid:</p>
+                      <p className="font-medium">{listing.currentBid} SUI</p>
+                    </div>
+                  )}
                   
                   <div className="flex gap-2 pt-2">
                     {currentAccount && listing.seller === currentAccount.address ? (
@@ -498,7 +677,7 @@ export default function HomeClient() {
                         loading={buyingId === listing.listing_id}
                         disabled={buyingId === listing.listing_id}
                       >
-                        {buyingId === listing.listing_id ? "Buying..." : "Buy Now"}
+                        {buyingId === listing.listing_id ? "Buying..." : listing.isAuction ? "Place Bid" : "Buy Now"}
                       </Button>
                     )}
                   </div>

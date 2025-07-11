@@ -10,10 +10,30 @@ import Button from './ui/Button';
 import Input from './ui/Input';
 import Link from 'next/link';
 
+const CATEGORIES = [
+  'NFTs',
+  'Gaming',
+  'Art',
+  'Collectibles',
+  'Music',
+  'Sports',
+  'Technology',
+  'Fashion',
+  'Real Estate',
+  'Other'
+];
+
 export default function SellClient() {
   const [objectId, setObjectId] = useState('');
   const [itemType, setItemType] = useState('');
   const [price, setPrice] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [category, setCategory] = useState('Other');
+  const [isAuction, setIsAuction] = useState(false);
+  const [startingPrice, setStartingPrice] = useState('');
+  const [minBid, setMinBid] = useState('');
+  const [duration, setDuration] = useState('24'); // hours
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -21,6 +41,11 @@ export default function SellClient() {
     objectId?: string;
     itemType?: string;
     price?: string;
+    title?: string;
+    description?: string;
+    startingPrice?: string;
+    minBid?: string;
+    duration?: string;
   }>({});
   
   const { signAndExecuteTransactionBlock, currentAccount } = useWalletKit();
@@ -43,15 +68,56 @@ export default function SellClient() {
       errors.itemType = 'Invalid type format (expected format: 0x...::module::Type)';
     }
     
+    // Title validation
+    if (!title.trim()) {
+      errors.title = 'Title is required';
+    } else if (title.length > 100) {
+      errors.title = 'Title must be 100 characters or less';
+    }
+    
+    // Description validation
+    if (description.length > 500) {
+      errors.description = 'Description must be 500 characters or less';
+    }
+    
     // Price validation
-    if (!price) {
-      errors.price = 'Price is required';
+    if (isAuction) {
+      if (!startingPrice) {
+        errors.startingPrice = 'Starting price is required';
+      } else {
+        const priceNum = parseFloat(startingPrice);
+        if (isNaN(priceNum) || priceNum <= 0) {
+          errors.startingPrice = 'Starting price must be a positive number';
+        }
+      }
+      
+      if (!minBid) {
+        errors.minBid = 'Minimum bid is required';
+      } else {
+        const bidNum = parseFloat(minBid);
+        if (isNaN(bidNum) || bidNum <= 0) {
+          errors.minBid = 'Minimum bid must be a positive number';
+        }
+      }
+      
+      if (!duration) {
+        errors.duration = 'Duration is required';
+      } else {
+        const durationNum = parseInt(duration);
+        if (isNaN(durationNum) || durationNum < 1 || durationNum > 168) {
+          errors.duration = 'Duration must be between 1 and 168 hours';
+        }
+      }
     } else {
-      const priceNum = parseFloat(price);
-      if (isNaN(priceNum) || priceNum <= 0) {
-        errors.price = 'Price must be a positive number';
-      } else if (priceNum > 1000000) {
-        errors.price = 'Price seems too high. Please double-check';
+      if (!price) {
+        errors.price = 'Price is required';
+      } else {
+        const priceNum = parseFloat(price);
+        if (isNaN(priceNum) || priceNum <= 0) {
+          errors.price = 'Price must be a positive number';
+        } else if (priceNum > 1000000) {
+          errors.price = 'Price seems too high. Please double-check';
+        }
       }
     }
     
@@ -83,12 +149,38 @@ export default function SellClient() {
       setSuccessMessage(null);
       
       const txb = new TransactionBlock();
-      const priceMist = BigInt(Math.round(parseFloat(price) * 1e9));
       
-      txb.moveCall({
-        target: `${PACKAGE_ID}::marketplace::list_item<${itemType}>`,
-        arguments: [txb.object(objectId), txb.pure(priceMist)],
-      });
+      if (isAuction) {
+        const startingPriceMist = BigInt(Math.round(parseFloat(startingPrice) * 1e9));
+        const minBidMist = BigInt(Math.round(parseFloat(minBid) * 1e9));
+        const durationMs = parseInt(duration) * 60 * 60 * 1000; // Convert hours to milliseconds
+        
+        txb.moveCall({
+          target: `${PACKAGE_ID}::marketplace::create_auction<${itemType}>`,
+          arguments: [
+            txb.object(objectId),
+            txb.pure(startingPriceMist),
+            txb.pure(minBidMist),
+            txb.pure(durationMs),
+            txb.pure(title),
+            txb.pure(description),
+            txb.pure(category),
+          ],
+        });
+      } else {
+        const priceMist = BigInt(Math.round(parseFloat(price) * 1e9));
+        
+        txb.moveCall({
+          target: `${PACKAGE_ID}::marketplace::list_item<${itemType}>`,
+          arguments: [
+            txb.object(objectId),
+            txb.pure(priceMist),
+            txb.pure(title),
+            txb.pure(description),
+            txb.pure(category),
+          ],
+        });
+      }
       
       const result = await signAndExecuteTransactionBlock({
         transactionBlock: txb,
@@ -96,12 +188,19 @@ export default function SellClient() {
       });
       
       console.log('Transaction result:', result);
-      setSuccessMessage('Item listed successfully! Redirecting to marketplace...');
+      setSuccessMessage(`${isAuction ? 'Auction' : 'Item'} created successfully! Redirecting to marketplace...`);
       
       // Reset form
       setObjectId('');
       setItemType('');
       setPrice('');
+      setTitle('');
+      setDescription('');
+      setCategory('Other');
+      setIsAuction(false);
+      setStartingPrice('');
+      setMinBid('');
+      setDuration('24');
       setValidationErrors({});
       
       // Redirect after a short delay
@@ -124,6 +223,26 @@ export default function SellClient() {
       // Clear price validation error when user types
       if (validationErrors.price) {
         setValidationErrors({ ...validationErrors, price: undefined });
+      }
+    }
+  };
+
+  const handleStartingPriceChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setStartingPrice(value);
+      if (validationErrors.startingPrice) {
+        setValidationErrors({ ...validationErrors, startingPrice: undefined });
+      }
+    }
+  };
+
+  const handleMinBidChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+      setMinBid(value);
+      if (validationErrors.minBid) {
+        setValidationErrors({ ...validationErrors, minBid: undefined });
       }
     }
   };
@@ -159,6 +278,86 @@ export default function SellClient() {
         </CardHeader>
         <CardContent>
           <form className="space-y-6" onSubmit={handleSubmit}>
+            {/* Listing Type */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Listing Type</label>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={!isAuction}
+                    onChange={() => setIsAuction(false)}
+                    className="text-primary"
+                  />
+                  <span>Fixed Price</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    checked={isAuction}
+                    onChange={() => setIsAuction(true)}
+                    className="text-primary"
+                  />
+                  <span>Auction</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Basic Information */}
+            <div className="space-y-2">
+              <Input
+                label="Title"
+                type="text"
+                value={title}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                  setTitle(e.target.value);
+                  if (validationErrors.title) {
+                    setValidationErrors({ ...validationErrors, title: undefined });
+                  }
+                }}
+                placeholder="Enter item title"
+                error={validationErrors.title}
+                disabled={loading}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Input
+                label="Description"
+                type="textarea"
+                value={description}
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+                  setDescription(e.target.value);
+                  if (validationErrors.description) {
+                    setValidationErrors({ ...validationErrors, description: undefined });
+                  }
+                }}
+                placeholder="Describe your item..."
+                error={validationErrors.description}
+                disabled={loading}
+              />
+              <p className="text-xs text-muted-foreground">
+                {description.length}/500 characters
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Category</label>
+              <select
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
+                disabled={loading}
+              >
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Object Information */}
             <div className="space-y-2">
               <Input
                 label="Object ID"
@@ -199,25 +398,76 @@ export default function SellClient() {
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Input
-                label="Price (SUI)"
-                type="text"
-                value={price}
-                onChange={handlePriceChange}
-                placeholder="10.5"
-                error={validationErrors.price}
-                disabled={loading}
-              />
-              <p className="text-xs text-muted-foreground">
-                Set your asking price in SUI tokens
-              </p>
-              {price && !validationErrors.price && (
-                <p className="text-xs text-primary">
-                  ≈ {parseFloat(price).toLocaleString()} SUI
+            {/* Pricing */}
+            {isAuction ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Input
+                    label="Starting Price (SUI)"
+                    type="text"
+                    value={startingPrice}
+                    onChange={handleStartingPriceChange}
+                    placeholder="10.5"
+                    error={validationErrors.startingPrice}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Input
+                    label="Minimum Bid (SUI)"
+                    type="text"
+                    value={minBid}
+                    onChange={handleMinBidChange}
+                    placeholder="0.1"
+                    error={validationErrors.minBid}
+                    disabled={loading}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Input
+                    label="Duration (hours)"
+                    type="number"
+                    value={duration}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      setDuration(e.target.value);
+                      if (validationErrors.duration) {
+                        setValidationErrors({ ...validationErrors, duration: undefined });
+                      }
+                    }}
+                    placeholder="24"
+                    min="1"
+                    max="168"
+                    error={validationErrors.duration}
+                    disabled={loading}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Auction duration in hours (1-168 hours)
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Input
+                  label="Price (SUI)"
+                  type="text"
+                  value={price}
+                  onChange={handlePriceChange}
+                  placeholder="10.5"
+                  error={validationErrors.price}
+                  disabled={loading}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Set your asking price in SUI tokens
                 </p>
-              )}
-            </div>
+                {price && !validationErrors.price && (
+                  <p className="text-xs text-primary">
+                    ≈ {parseFloat(price).toLocaleString()} SUI
+                  </p>
+                )}
+              </div>
+            )}
 
             {!currentAccount && (
               <Card className="border-blue-500 bg-blue-50 dark:bg-blue-900/20">
@@ -236,7 +486,7 @@ export default function SellClient() {
                 loading={loading}
                 className="flex-1"
               >
-                {loading ? 'Creating Listing...' : 'List Item'}
+                {loading ? 'Creating Listing...' : `Create ${isAuction ? 'Auction' : 'Listing'}`}
               </Button>
               <Button
                 type="button"
@@ -288,6 +538,13 @@ export default function SellClient() {
               The item type is the full Move type of your object. It typically looks like 
               "0x2::devnet_nft::DevNFT" where 0x2 is the package address, devnet_nft is the module, 
               and DevNFT is the type name.
+            </p>
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm mb-1">Fixed Price vs Auction</h4>
+            <p className="text-sm text-muted-foreground">
+              Fixed price listings are sold immediately when someone buys them. Auctions allow 
+              multiple people to bid, with the highest bidder winning when the auction ends.
             </p>
           </div>
           <div>
