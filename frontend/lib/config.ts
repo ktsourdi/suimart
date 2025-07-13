@@ -27,3 +27,11 @@ if (!ALLOWED_NETWORKS.includes(rawNetwork as SuiNetwork)) {
 }
 
 export const SUI_NETWORK: SuiNetwork = rawNetwork as SuiNetwork;
+
+// Mock mode configuration
+export const MOCK_MODE = process.env.NEXT_PUBLIC_MOCK_MODE === 'true' || 
+  process.env.NODE_ENV === 'development' && !process.env.NEXT_PUBLIC_MARKETPLACE_PACKAGE;
+
+// Mock wallet configuration
+export const MOCK_WALLET_ADDRESS = "0x1234567890abcdef1234567890abcdef12345678";
+export const MOCK_WALLET_NAME = "Mock Wallet";

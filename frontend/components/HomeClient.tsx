@@ -1,13 +1,13 @@
 'use client';
-import { useWalletKit } from "@mysten/wallet-kit";
-import { JsonRpcProvider, TransactionBlock } from "@mysten/sui.js";
+import { useWallet } from "../lib/useWallet";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { PACKAGE_ID, SUI_NETWORK } from "../lib/config";
 import Card, { CardContent, CardHeader, CardTitle } from "./ui/Card";
 import Button from "./ui/Button";
 import Input from "./ui/Input";
 import MarketStats from "./MarketStats";
+import { mockMarketplace, MockListing } from "../lib/mockData";
+import { MOCK_MODE } from "../lib/config";
 
 interface ListingData {
   listing_id: string;
@@ -25,6 +25,8 @@ interface ListingData {
   auctionEndTime?: number;
   currentBid?: number;
   highestBidder?: string;
+  imageUrl?: string;
+  status?: string;
 }
 
 type SortOption = 'price-asc' | 'price-desc' | 'newest' | 'oldest' | 'popular' | 'ending-soon';
@@ -109,15 +111,13 @@ export default function HomeClient() {
   const {
     currentAccount,
     connect,
-    signAndExecuteTransactionBlock,
-  } = useWalletKit();
+  } = useWallet();
 
   const [listings, setListings] = useState<ListingData[]>([]);
   const [filteredListings, setFilteredListings] = useState<ListingData[]>([]);
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [provider, setProvider] = useState<JsonRpcProvider | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [priceRange, setPriceRange] = useState({ min: '', max: '' });
@@ -128,82 +128,41 @@ export default function HomeClient() {
   const [showAuctionOnly, setShowAuctionOnly] = useState(false);
   const [showFixedPriceOnly, setShowFixedPriceOnly] = useState(false);
 
-  // Initialize provider only on client side
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const rpcProvider = new JsonRpcProvider({
-        fullnode: `https://fullnode.${SUI_NETWORK}.sui.io`,
-        websocket: `wss://fullnode.${SUI_NETWORK}.sui.io`,
-      } as any);
-      setProvider(rpcProvider);
-    }
-  }, []);
-
   const fetchListings = useCallback(async () => {
-    if (!provider || !PACKAGE_ID || PACKAGE_ID === "0x0000000000000000000000000000000000000000000000000000000000000000") {
-      console.log("Provider not initialized or PACKAGE_ID not configured, skipping listings fetch");
-      setIsLoading(false);
-      return;
-    }
-
     try {
       setIsLoading(true);
-      const events = await provider.queryEvents({
-        MoveEventType: `${PACKAGE_ID}::marketplace::ListingCreated`,
-      });
+      const mockListings = await mockMarketplace.getListings();
       
-      const mapped = await Promise.all(
-        events.data.map(async (e: any): Promise<ListingData | null> => {
-          const listingId = e.parsedJson.listing_id as string;
-          
-          try {
-            const obj = await provider.getObject({
-              id: listingId,
-              options: { showType: true },
-            });
-            
-            // Check if the listing still exists (not cancelled or bought)
-            if (!obj.data) {
-              return null;
-            }
-            
-            const fullType = obj.data?.type as string;
-            const itemType = fullType?.match(/<(.+)>/)?.[1] ?? "unknown";
-            
-            return {
-              listing_id: listingId,
-              price: Number(e.parsedJson.price) / 1e9,
-              seller: e.parsedJson.seller,
-              itemType,
-              title: e.parsedJson.title || 'Untitled Item',
-              description: e.parsedJson.description || '',
-              category: e.parsedJson.category || 'Other',
-              createdAt: e.timestampMs ? Number(e.timestampMs) : Date.now(),
-              updatedAt: e.timestampMs ? Number(e.timestampMs) : Date.now(),
-              views: 0,
-              favorites: 0,
-              isAuction: e.parsedJson.is_auction || false,
-              auctionEndTime: e.parsedJson.auction_end_time ? Number(e.parsedJson.auction_end_time) : undefined,
-              currentBid: e.parsedJson.current_bid ? Number(e.parsedJson.current_bid) / 1e9 : undefined,
-              highestBidder: e.parsedJson.highest_bidder,
-            };
-          } catch (error) {
-            console.error(`Error fetching listing ${listingId}:`, error);
-            return null;
-          }
-        })
-      );
+      // Convert MockListing to ListingData format
+      const convertedListings: ListingData[] = mockListings.map(listing => ({
+        listing_id: listing.listing_id,
+        price: listing.price,
+        seller: listing.seller,
+        itemType: listing.itemType,
+        title: listing.title,
+        description: listing.description,
+        category: listing.category,
+        createdAt: listing.createdAt,
+        updatedAt: listing.updatedAt,
+        views: listing.views,
+        favorites: listing.favorites,
+        isAuction: listing.isAuction,
+        auctionEndTime: listing.auctionEndTime,
+        currentBid: listing.currentBid,
+        highestBidder: listing.highestBidder,
+        imageUrl: listing.imageUrl,
+        status: listing.status
+      }));
       
-      const validListings = mapped.filter((listing: ListingData | null): listing is ListingData => listing !== null);
-      setListings(validListings);
-      setFilteredListings(validListings);
+      setListings(convertedListings);
+      setFilteredListings(convertedListings);
     } catch (error) {
-      console.error("Error fetching listings:", error);
-      setErrorMessage("Failed to fetch listings. Please check your configuration.");
+      console.error('Error fetching listings:', error);
+      setErrorMessage('Failed to fetch listings. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  }, [provider, PACKAGE_ID]);
+  }, []);
 
   useEffect(() => {
     fetchListings();
@@ -284,21 +243,10 @@ export default function HomeClient() {
       return;
     }
 
-    const priceMist = BigInt(Math.round(listing.price * 1e9));
-    const txb = new TransactionBlock();
-    const payment = txb.splitCoins(txb.gas, [txb.pure(priceMist)]);
-    txb.moveCall({
-      target: `${PACKAGE_ID}::marketplace::buy_item<${listing.itemType}>`,
-      arguments: [txb.object(listing.listing_id), payment],
-    });
-
     setBuyingId(listing.listing_id);
     setErrorMessage(null);
     try {
-      await signAndExecuteTransactionBlock({
-        transactionBlock: txb,
-        options: { showEffects: true },
-      });
+      await mockMarketplace.buyItem(listing.listing_id, currentAccount.address);
       // Refresh listings after successful purchase
       setTimeout(fetchListings, 1000);
     } catch (err) {
@@ -316,19 +264,10 @@ export default function HomeClient() {
       return;
     }
 
-    const txb = new TransactionBlock();
-    txb.moveCall({
-      target: `${PACKAGE_ID}::marketplace::cancel_listing<${listing.itemType}>`,
-      arguments: [txb.object(listing.listing_id)],
-    });
-
     setCancellingId(listing.listing_id);
     setErrorMessage(null);
     try {
-      await signAndExecuteTransactionBlock({
-        transactionBlock: txb,
-        options: { showEffects: true },
-      });
+      await mockMarketplace.cancelListing(listing.listing_id, currentAccount.address);
       // Refresh listings after successful cancellation
       setTimeout(fetchListings, 1000);
     } catch (err) {
@@ -370,6 +309,12 @@ export default function HomeClient() {
             Suimart
           </h1>
           <p className="text-muted-foreground mt-1">Decentralized marketplace on Sui</p>
+          {MOCK_MODE && (
+            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 rounded-full text-sm font-medium">
+              <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
+              Mock Mode - Demo Data
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -558,16 +503,7 @@ export default function HomeClient() {
       )}
 
       {/* Configuration Warning */}
-      {PACKAGE_ID === "0x0000000000000000000000000000000000000000000000000000000000000000" && (
-        <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
-          <CardContent className="p-4">
-            <p className="font-semibold text-yellow-800 dark:text-yellow-200">Configuration Required</p>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300">
-              Please set the NEXT_PUBLIC_MARKETPLACE_PACKAGE environment variable to your deployed package ID.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {/* This section is removed as per the edit hint to remove real contract interactions */}
 
       {/* Enhanced Listings Grid/List */}
       <section className="space-y-4">

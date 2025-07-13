@@ -2,14 +2,14 @@
 
 import { useState, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
-import { TransactionBlock } from '@mysten/sui.js';
-import { useWalletKit } from '@mysten/wallet-kit';
-import { PACKAGE_ID } from '../lib/config';
+import { useWallet } from '../lib/useWallet';
 import Card, { CardContent, CardHeader, CardTitle } from './ui/Card';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import Textarea from './ui/Textarea';
 import Link from 'next/link';
+import { mockMarketplace } from '../lib/mockData';
+import { MOCK_MODE } from '../lib/config';
 
 const CATEGORIES = [
   'NFTs',
@@ -49,7 +49,7 @@ export default function SellClient() {
     duration?: string;
   }>({});
   
-  const { signAndExecuteTransactionBlock, currentAccount } = useWalletKit();
+  const { signAndExecuteTransactionBlock, currentAccount } = useWallet();
   const router = useRouter();
 
   const validateForm = (): boolean => {
@@ -138,57 +138,42 @@ export default function SellClient() {
       return;
     }
 
-    // Check if PACKAGE_ID is properly configured
-    if (!PACKAGE_ID || PACKAGE_ID === "0x0000000000000000000000000000000000000000000000000000000000000000") {
-      setErrorMessage("Please configure the NEXT_PUBLIC_MARKETPLACE_PACKAGE environment variable.");
-      return;
-    }
-
     try {
       setLoading(true);
       setErrorMessage(null);
       setSuccessMessage(null);
       
-      const txb = new TransactionBlock();
-      
       if (isAuction) {
-        const startingPriceMist = BigInt(Math.round(parseFloat(startingPrice) * 1e9));
-        const minBidMist = BigInt(Math.round(parseFloat(minBid) * 1e9));
+        const startingPriceMist = parseFloat(startingPrice);
+        const minBidMist = parseFloat(minBid);
         const durationMs = parseInt(duration) * 60 * 60 * 1000; // Convert hours to milliseconds
         
-        txb.moveCall({
-          target: `${PACKAGE_ID}::marketplace::create_auction<${itemType}>`,
-          arguments: [
-            txb.object(objectId),
-            txb.pure(startingPriceMist),
-            txb.pure(minBidMist),
-            txb.pure(durationMs),
-            txb.pure(title),
-            txb.pure(description),
-            txb.pure(category),
-          ],
+        await mockMarketplace.createListing({
+          price: startingPriceMist,
+          seller: currentAccount.address,
+          itemType,
+          title,
+          description,
+          category,
+          isAuction: true,
+          auctionEndTime: Date.now() + durationMs,
+          currentBid: startingPriceMist,
+          highestBidder: currentAccount.address,
         });
       } else {
-        const priceMist = BigInt(Math.round(parseFloat(price) * 1e9));
+        const priceMist = parseFloat(price);
         
-        txb.moveCall({
-          target: `${PACKAGE_ID}::marketplace::list_item<${itemType}>`,
-          arguments: [
-            txb.object(objectId),
-            txb.pure(priceMist),
-            txb.pure(title),
-            txb.pure(description),
-            txb.pure(category),
-          ],
+        await mockMarketplace.createListing({
+          price: priceMist,
+          seller: currentAccount.address,
+          itemType,
+          title,
+          description,
+          category,
+          isAuction: false,
         });
       }
       
-      const result = await signAndExecuteTransactionBlock({
-        transactionBlock: txb,
-        options: { showEffects: true },
-      });
-      
-      console.log('Transaction result:', result);
       setSuccessMessage(`${isAuction ? 'Auction' : 'Item'} created successfully! Redirecting to marketplace...`);
       
       // Reset form
@@ -204,13 +189,16 @@ export default function SellClient() {
       setDuration('24');
       setValidationErrors({});
       
-      // Redirect after a short delay
+      // Redirect to marketplace after a short delay
       setTimeout(() => {
         router.push('/');
       }, 2000);
+      
     } catch (error) {
-      console.error("Error listing item:", error);
-      setErrorMessage((error as Error)?.message ?? "Failed to list item. Please try again.");
+      console.error('Error creating listing:', error);
+      setErrorMessage(
+        (error as Error)?.message ?? "Failed to create listing. Please try again."
+      );
     } finally {
       setLoading(false);
     }
@@ -249,29 +237,25 @@ export default function SellClient() {
   };
 
   return (
-    <main className="max-w-2xl mx-auto p-6 space-y-6">
+    <main className="max-w-4xl mx-auto p-6 space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">List an Item</h1>
-          <p className="text-muted-foreground mt-1">Create a new listing on the marketplace</p>
+          <p className="text-muted-foreground mt-1">Create a new listing or auction</p>
+          {MOCK_MODE && (
+            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 rounded-full text-sm font-medium">
+              <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
+              Mock Mode - Demo Data
+            </div>
+          )}
         </div>
         <Link href="/">
-          <Button variant="outline" size="sm">
-            Back to Marketplace
-          </Button>
+          <Button variant="outline">Back to Marketplace</Button>
         </Link>
       </div>
 
-      {PACKAGE_ID === "0x0000000000000000000000000000000000000000000000000000000000000000" && (
-        <Card className="border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20">
-          <CardContent className="p-4">
-            <p className="font-semibold text-yellow-800 dark:text-yellow-200">Configuration Required</p>
-            <p className="text-sm text-yellow-700 dark:text-yellow-300">
-              Please set the NEXT_PUBLIC_MARKETPLACE_PACKAGE environment variable to your deployed package ID.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {/* Removed PACKAGE_ID check as it's no longer used */}
 
       <Card>
         <CardHeader>
