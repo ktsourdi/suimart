@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useWalletKit } from '@mysten/wallet-kit';
 import { JsonRpcProvider } from '@mysten/sui.js';
 import { PACKAGE_ID, SUI_NETWORK } from '../lib/config';
-import Card, { CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import Link from 'next/link';

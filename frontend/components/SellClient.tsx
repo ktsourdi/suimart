@@ -101,12 +101,7 @@ export default function SellClient() {
         category,
         seller: currentAccount.address,
         itemType: 'sui::coin::Coin<0x2::sui::SUI>',
-        isAuction: false,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        views: 0,
-        favorites: 0,
-        status: 'active'
+        isAuction: false
       });
 
       setSuccessMessage("Item listed successfully! Redirecting to marketplace...");

@@ -65,7 +65,7 @@ export default function HomeClient() {
     try {
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
-      const mockListings = mockMarketplace.getListings();
+      const mockListings = await mockMarketplace.getListings();
       setListings(mockListings);
     } catch (error) {
       console.error("Failed to fetch listings:", error);
@@ -116,7 +116,7 @@ export default function HomeClient() {
     }
 
     try {
-      await mockMarketplace.buyListing(listingId, currentAccount.address);
+      await mockMarketplace.buyItem(listingId, currentAccount.address);
       alert("Purchase successful! The item has been transferred to your wallet.");
       fetchListings(); // Refresh listings
     } catch (error) {
