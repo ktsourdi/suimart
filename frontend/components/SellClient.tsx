@@ -8,6 +8,7 @@ import { PACKAGE_ID } from '../lib/config';
 import Card, { CardContent, CardHeader, CardTitle } from './ui/Card';
 import Button from './ui/Button';
 import Input from './ui/Input';
+import Textarea from './ui/Textarea';
 import Link from 'next/link';
 
 const CATEGORIES = [
@@ -322,11 +323,10 @@ export default function SellClient() {
             </div>
 
             <div className="space-y-2">
-              <Input
+              <Textarea
                 label="Description"
-                type="textarea"
                 value={description}
-                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
                   setDescription(e.target.value);
                   if (validationErrors.description) {
                     setValidationErrors({ ...validationErrors, description: undefined });
