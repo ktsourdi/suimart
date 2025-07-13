@@ -1,15 +1,23 @@
 import { HTMLAttributes, forwardRef } from 'react';
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {}
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  variant?: 'default' | 'elevated' | 'outlined';
+}
 
 const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ className = '', children, ...props }, ref) => {
+  ({ className = '', variant = 'default', children, ...props }, ref) => {
+    const baseClasses = 'rounded-xl transition-all duration-200';
+    
+    const variantClasses = {
+      default: 'bg-white border border-[#e3e6e8] shadow-sm hover:shadow-md hover:-translate-y-0.5',
+      elevated: 'bg-white border border-[#e3e6e8] shadow-md hover:shadow-lg hover:-translate-y-1',
+      outlined: 'bg-white border-2 border-[#6fbcf0] shadow-sm'
+    };
+    
+    const classes = `${baseClasses} ${variantClasses[variant]} ${className}`;
+    
     return (
-      <div
-        ref={ref}
-        className={`rounded-lg border border-border bg-card text-card-foreground shadow-sm ${className}`}
-        {...props}
-      >
+      <div ref={ref} className={classes} {...props}>
         {children}
       </div>
     );
@@ -18,25 +26,60 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
 
 Card.displayName = 'Card';
 
-export const CardHeader = forwardRef<HTMLDivElement, CardProps>(
-  ({ className = '', ...props }, ref) => (
-    <div ref={ref} className={`flex flex-col space-y-1.5 p-6 ${className}`} {...props} />
-  )
+interface CardHeaderProps extends HTMLAttributes<HTMLDivElement> {}
+
+const CardHeader = forwardRef<HTMLDivElement, CardHeaderProps>(
+  ({ className = '', children, ...props }, ref) => {
+    return (
+      <div ref={ref} className={`p-6 pb-0 ${className}`} {...props}>
+        {children}
+      </div>
+    );
+  }
 );
+
 CardHeader.displayName = 'CardHeader';
 
-export const CardTitle = forwardRef<HTMLHeadingElement, HTMLAttributes<HTMLHeadingElement>>(
-  ({ className = '', ...props }, ref) => (
-    <h3 ref={ref} className={`text-2xl font-semibold leading-none tracking-tight ${className}`} {...props} />
-  )
+interface CardTitleProps extends HTMLAttributes<HTMLHeadingElement> {}
+
+const CardTitle = forwardRef<HTMLHeadingElement, CardTitleProps>(
+  ({ className = '', children, ...props }, ref) => {
+    return (
+      <h3 ref={ref} className={`text-xl font-semibold text-[#182435] leading-tight ${className}`} {...props}>
+        {children}
+      </h3>
+    );
+  }
 );
+
 CardTitle.displayName = 'CardTitle';
 
-export const CardContent = forwardRef<HTMLDivElement, CardProps>(
-  ({ className = '', ...props }, ref) => (
-    <div ref={ref} className={`p-6 pt-0 ${className}`} {...props} />
-  )
+interface CardContentProps extends HTMLAttributes<HTMLDivElement> {}
+
+const CardContent = forwardRef<HTMLDivElement, CardContentProps>(
+  ({ className = '', children, ...props }, ref) => {
+    return (
+      <div ref={ref} className={`p-6 ${className}`} {...props}>
+        {children}
+      </div>
+    );
+  }
 );
+
 CardContent.displayName = 'CardContent';
 
-export default Card;
+interface CardFooterProps extends HTMLAttributes<HTMLDivElement> {}
+
+const CardFooter = forwardRef<HTMLDivElement, CardFooterProps>(
+  ({ className = '', children, ...props }, ref) => {
+    return (
+      <div ref={ref} className={`p-6 pt-0 ${className}`} {...props}>
+        {children}
+      </div>
+    );
+  }
+);
+
+CardFooter.displayName = 'CardFooter';
+
+export { Card, CardHeader, CardTitle, CardContent, CardFooter };

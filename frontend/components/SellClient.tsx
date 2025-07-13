@@ -3,7 +3,7 @@
 import { useState, FormEvent, ChangeEvent } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '../lib/useWallet';
-import Card, { CardContent, CardHeader, CardTitle } from './ui/Card';
+import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import Textarea from './ui/Textarea';
@@ -11,117 +11,65 @@ import Link from 'next/link';
 import { mockMarketplace } from '../lib/mockData';
 import { MOCK_MODE } from '../lib/config';
 
-const CATEGORIES = [
-  'NFTs',
-  'Gaming',
-  'Art',
-  'Collectibles',
-  'Music',
-  'Sports',
-  'Technology',
-  'Fashion',
-  'Real Estate',
-  'Other'
-];
+interface ValidationErrors {
+  title?: string;
+  description?: string;
+  price?: string;
+  category?: string;
+}
 
 export default function SellClient() {
-  const [objectId, setObjectId] = useState('');
-  const [itemType, setItemType] = useState('');
-  const [price, setPrice] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState('Other');
-  const [isAuction, setIsAuction] = useState(false);
-  const [startingPrice, setStartingPrice] = useState('');
-  const [minBid, setMinBid] = useState('');
-  const [duration, setDuration] = useState('24'); // hours
+  const [price, setPrice] = useState('');
+  const [category, setCategory] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [validationErrors, setValidationErrors] = useState<{
-    objectId?: string;
-    itemType?: string;
-    price?: string;
-    title?: string;
-    description?: string;
-    startingPrice?: string;
-    minBid?: string;
-    duration?: string;
-  }>({});
-  
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
+
   const { signAndExecuteTransactionBlock, currentAccount } = useWallet();
   const router = useRouter();
 
+  const categories = [
+    { id: 'nfts', name: 'NFTs' },
+    { id: 'gaming', name: 'Gaming' },
+    { id: 'art', name: 'Art' },
+    { id: 'collectibles', name: 'Collectibles' },
+    { id: 'music', name: 'Music' },
+    { id: 'sports', name: 'Sports' },
+    { id: 'virtual-worlds', name: 'Virtual Worlds' },
+    { id: 'other', name: 'Other' },
+  ];
+
   const validateForm = (): boolean => {
-    const errors: typeof validationErrors = {};
-    
-    // Object ID validation
-    if (!objectId) {
-      errors.objectId = 'Object ID is required';
-    } else if (!objectId.startsWith('0x') || objectId.length < 10) {
-      errors.objectId = 'Invalid object ID format';
-    }
-    
-    // Item type validation
-    if (!itemType) {
-      errors.itemType = 'Item type is required';
-    } else if (!itemType.includes('::')) {
-      errors.itemType = 'Invalid type format (expected format: 0x...::module::Type)';
-    }
-    
-    // Title validation
+    const errors: ValidationErrors = {};
+
     if (!title.trim()) {
       errors.title = 'Title is required';
-    } else if (title.length > 100) {
-      errors.title = 'Title must be 100 characters or less';
+    } else if (title.length < 3) {
+      errors.title = 'Title must be at least 3 characters';
     }
-    
-    // Description validation
-    if (description.length > 500) {
-      errors.description = 'Description must be 500 characters or less';
+
+    if (!description.trim()) {
+      errors.description = 'Description is required';
+    } else if (description.length < 10) {
+      errors.description = 'Description must be at least 10 characters';
     }
-    
-    // Price validation
-    if (isAuction) {
-      if (!startingPrice) {
-        errors.startingPrice = 'Starting price is required';
-      } else {
-        const priceNum = parseFloat(startingPrice);
-        if (isNaN(priceNum) || priceNum <= 0) {
-          errors.startingPrice = 'Starting price must be a positive number';
-        }
-      }
-      
-      if (!minBid) {
-        errors.minBid = 'Minimum bid is required';
-      } else {
-        const bidNum = parseFloat(minBid);
-        if (isNaN(bidNum) || bidNum <= 0) {
-          errors.minBid = 'Minimum bid must be a positive number';
-        }
-      }
-      
-      if (!duration) {
-        errors.duration = 'Duration is required';
-      } else {
-        const durationNum = parseInt(duration);
-        if (isNaN(durationNum) || durationNum < 1 || durationNum > 168) {
-          errors.duration = 'Duration must be between 1 and 168 hours';
-        }
-      }
+
+    if (!price.trim()) {
+      errors.price = 'Price is required';
     } else {
-      if (!price) {
-        errors.price = 'Price is required';
-      } else {
-        const priceNum = parseFloat(price);
-        if (isNaN(priceNum) || priceNum <= 0) {
-          errors.price = 'Price must be a positive number';
-        } else if (priceNum > 1000000) {
-          errors.price = 'Price seems too high. Please double-check';
-        }
+      const priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum <= 0) {
+        errors.price = 'Price must be a positive number';
       }
     }
-    
+
+    if (!category) {
+      errors.category = 'Category is required';
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -138,161 +86,93 @@ export default function SellClient() {
       return;
     }
 
+    setLoading(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
     try {
-      setLoading(true);
-      setErrorMessage(null);
-      setSuccessMessage(null);
+      // Simulate transaction delay
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      if (isAuction) {
-        const startingPriceMist = parseFloat(startingPrice);
-        const minBidMist = parseFloat(minBid);
-        const durationMs = parseInt(duration) * 60 * 60 * 1000; // Convert hours to milliseconds
-        
-        await mockMarketplace.createListing({
-          price: startingPriceMist,
-          seller: currentAccount.address,
-          itemType,
-          title,
-          description,
-          category,
-          isAuction: true,
-          auctionEndTime: Date.now() + durationMs,
-          currentBid: startingPriceMist,
-          highestBidder: currentAccount.address,
-        });
-      } else {
-        const priceMist = parseFloat(price);
-        
-        await mockMarketplace.createListing({
-          price: priceMist,
-          seller: currentAccount.address,
-          itemType,
-          title,
-          description,
-          category,
-          isAuction: false,
-        });
-      }
-      
-      setSuccessMessage(`${isAuction ? 'Auction' : 'Item'} created successfully! Redirecting to marketplace...`);
+      await mockMarketplace.createListing({
+        title: title.trim(),
+        description: description.trim(),
+        price: parseFloat(price),
+        category,
+        seller: currentAccount.address,
+        itemType: 'sui::coin::Coin<0x2::sui::SUI>',
+        isAuction: false,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        views: 0,
+        favorites: 0,
+        status: 'active'
+      });
+
+      setSuccessMessage("Item listed successfully! Redirecting to marketplace...");
       
       // Reset form
-      setObjectId('');
-      setItemType('');
-      setPrice('');
       setTitle('');
       setDescription('');
-      setCategory('Other');
-      setIsAuction(false);
-      setStartingPrice('');
-      setMinBid('');
-      setDuration('24');
+      setPrice('');
+      setCategory('');
       setValidationErrors({});
-      
-      // Redirect to marketplace after a short delay
+
+      // Redirect after a short delay
       setTimeout(() => {
         router.push('/');
       }, 2000);
-      
+
     } catch (error) {
-      console.error('Error creating listing:', error);
-      setErrorMessage(
-        (error as Error)?.message ?? "Failed to create listing. Please try again."
-      );
+      console.error('Failed to create listing:', error);
+      setErrorMessage("Failed to create listing. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePriceChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    // Allow only numbers and decimals
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setPrice(value);
-      // Clear price validation error when user types
-      if (validationErrors.price) {
-        setValidationErrors({ ...validationErrors, price: undefined });
-      }
-    }
-  };
-
-  const handleStartingPriceChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setStartingPrice(value);
-      if (validationErrors.startingPrice) {
-        setValidationErrors({ ...validationErrors, startingPrice: undefined });
-      }
-    }
-  };
-
-  const handleMinBidChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setMinBid(value);
-      if (validationErrors.minBid) {
-        setValidationErrors({ ...validationErrors, minBid: undefined });
-      }
-    }
+  const formatAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   return (
-    <main className="max-w-4xl mx-auto p-6 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">List an Item</h1>
-          <p className="text-muted-foreground mt-1">Create a new listing or auction</p>
+    <main className="min-h-screen bg-gradient-to-br from-[#f8fafc] to-[#e1f3ff] py-8">
+      <div className="max-w-4xl mx-auto px-6">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">
+            <span className="bg-gradient-to-r from-[#6fbcf0] to-[#0284ad] bg-clip-text text-transparent">
+              Sell Your Item
+            </span>
+          </h1>
+          <p className="text-xl text-[#636871] mb-6">
+            List your digital assets on Suimart and reach thousands of buyers
+          </p>
           {MOCK_MODE && (
-            <div className="mt-2 inline-flex items-center gap-2 px-3 py-1 bg-yellow-100 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-200 rounded-full text-sm font-medium">
-              <span className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
-              Mock Mode - Demo Data
+            <div className="inline-flex items-center px-4 py-2 bg-[#fff8e2] border border-[#f5cf54] rounded-lg text-[#8d6e15] text-sm font-medium mb-6">
+              <span className="w-2 h-2 bg-[#f5cf54] rounded-full mr-2"></span>
+              Mock Mode - Demo Environment
+            </div>
+          )}
+          {currentAccount && (
+            <div className="inline-flex items-center px-4 py-2 bg-[#e1f3ff] border border-[#6fbcf0] rounded-lg text-[#1f6493] text-sm font-medium">
+              <span className="w-2 h-2 bg-[#6fbcf0] rounded-full mr-2"></span>
+              Connected: {formatAddress(currentAccount.address)}
             </div>
           )}
         </div>
-        <Link href="/">
-          <Button variant="outline">Back to Marketplace</Button>
-        </Link>
-      </div>
 
-      {/* Removed PACKAGE_ID check as it's no longer used */}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Listing Details</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Listing Type */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Listing Type</label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={!isAuction}
-                    onChange={() => setIsAuction(false)}
-                    className="text-primary"
-                  />
-                  <span>Fixed Price</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="radio"
-                    checked={isAuction}
-                    onChange={() => setIsAuction(true)}
-                    className="text-primary"
-                  />
-                  <span>Auction</span>
-                </label>
-              </div>
-            </div>
-
-            {/* Basic Information */}
-            <div className="space-y-2">
+        {/* Form */}
+        <Card variant="elevated" className="max-w-2xl mx-auto">
+          <CardHeader>
+            <CardTitle>Create New Listing</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Title */}
               <Input
-                label="Title"
-                type="text"
+                label="Item Title"
+                placeholder="Enter a descriptive title for your item"
                 value={title}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
                   setTitle(e.target.value);
@@ -300,245 +180,167 @@ export default function SellClient() {
                     setValidationErrors({ ...validationErrors, title: undefined });
                   }
                 }}
-                placeholder="Enter item title"
                 error={validationErrors.title}
                 disabled={loading}
+                required
               />
-            </div>
 
-            <div className="space-y-2">
+              {/* Description */}
               <Textarea
                 label="Description"
+                placeholder="Describe your item in detail..."
                 value={description}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                onChange={(e: ChangeEvent<HTMLTextAreaElement>) => {
                   setDescription(e.target.value);
                   if (validationErrors.description) {
                     setValidationErrors({ ...validationErrors, description: undefined });
                   }
                 }}
-                placeholder="Describe your item..."
                 error={validationErrors.description}
                 disabled={loading}
+                required
               />
-              <p className="text-xs text-muted-foreground">
-                {description.length}/500 characters
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Category</label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:outline-none focus:ring-2 focus:ring-ring"
-                disabled={loading}
-              >
-                {CATEGORIES.map((cat) => (
-                  <option key={cat} value={cat}>
-                    {cat}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Object Information */}
-            <div className="space-y-2">
+              {/* Price */}
               <Input
-                label="Object ID"
-                type="text"
-                value={objectId}
+                label="Price (SUI)"
+                type="number"
+                placeholder="0.00"
+                step="0.01"
+                min="0"
+                value={price}
                 onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  setObjectId(e.target.value);
-                  if (validationErrors.objectId) {
-                    setValidationErrors({ ...validationErrors, objectId: undefined });
+                  setPrice(e.target.value);
+                  if (validationErrors.price) {
+                    setValidationErrors({ ...validationErrors, price: undefined });
                   }
                 }}
-                placeholder="0xabc123..."
-                error={validationErrors.objectId}
+                error={validationErrors.price}
                 disabled={loading}
+                required
+                helperText="Enter the price in SUI tokens"
               />
-              <p className="text-xs text-muted-foreground">
-                The unique identifier of the object you want to list
-              </p>
-            </div>
 
-            <div className="space-y-2">
-              <Input
-                label="Item Type"
-                type="text"
-                value={itemType}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                  setItemType(e.target.value);
-                  if (validationErrors.itemType) {
-                    setValidationErrors({ ...validationErrors, itemType: undefined });
-                  }
-                }}
-                placeholder="0x2::devnet_nft::DevNFT"
-                error={validationErrors.itemType}
-                disabled={loading}
-              />
-              <p className="text-xs text-muted-foreground">
-                The full type of your item (e.g., 0x2::devnet_nft::DevNFT)
-              </p>
-            </div>
-
-            {/* Pricing */}
-            {isAuction ? (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Input
-                    label="Starting Price (SUI)"
-                    type="text"
-                    value={startingPrice}
-                    onChange={handleStartingPriceChange}
-                    placeholder="10.5"
-                    error={validationErrors.startingPrice}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Input
-                    label="Minimum Bid (SUI)"
-                    type="text"
-                    value={minBid}
-                    onChange={handleMinBidChange}
-                    placeholder="0.1"
-                    error={validationErrors.minBid}
-                    disabled={loading}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Input
-                    label="Duration (hours)"
-                    type="number"
-                    value={duration}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
-                      setDuration(e.target.value);
-                      if (validationErrors.duration) {
-                        setValidationErrors({ ...validationErrors, duration: undefined });
-                      }
-                    }}
-                    placeholder="24"
-                    min="1"
-                    max="168"
-                    error={validationErrors.duration}
-                    disabled={loading}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Auction duration in hours (1-168 hours)
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <Input
-                  label="Price (SUI)"
-                  type="text"
-                  value={price}
-                  onChange={handlePriceChange}
-                  placeholder="10.5"
-                  error={validationErrors.price}
+              {/* Category */}
+              <div className="w-full">
+                <label className="block text-sm font-medium text-[#182435] mb-2">
+                  Category
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => {
+                    setCategory(e.target.value);
+                    if (validationErrors.category) {
+                      setValidationErrors({ ...validationErrors, category: undefined });
+                    }
+                  }}
                   disabled={loading}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Set your asking price in SUI tokens
-                </p>
-                {price && !validationErrors.price && (
-                  <p className="text-xs text-primary">
-                    ≈ {parseFloat(price).toLocaleString()} SUI
-                  </p>
+                  className="w-full px-4 py-3 border-2 border-[#cbd5e1] bg-white text-[#182435] rounded-lg transition-all duration-200 focus:outline-none focus:border-[#6fbcf0] focus:ring-2 focus:ring-[#6fbcf0] focus:ring-opacity-20 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <option value="">Select a category</option>
+                  {categories.map((cat) => (
+                    <option key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </option>
+                  ))}
+                </select>
+                {validationErrors.category && (
+                  <p className="mt-1 text-sm text-[#ff794b]">{validationErrors.category}</p>
                 )}
               </div>
-            )}
 
-            {!currentAccount && (
-              <Card className="border-blue-500 bg-blue-50 dark:bg-blue-900/20">
-                <CardContent className="p-4">
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    Please connect your wallet to list an item
-                  </p>
-                </CardContent>
-              </Card>
-            )}
+              {/* Error/Success Messages */}
+              {errorMessage && (
+                <div className="p-4 bg-[#ffece6] border border-[#ff794b] rounded-lg">
+                  <p className="text-[#ff794b] text-sm">{errorMessage}</p>
+                </div>
+              )}
 
-            <div className="flex gap-4">
-              <Button
-                type="submit"
-                disabled={loading || !currentAccount}
-                loading={loading}
-                className="flex-1"
-              >
-                {loading ? 'Creating Listing...' : `Create ${isAuction ? 'Auction' : 'Listing'}`}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => router.push('/')}
-                disabled={loading}
-              >
-                Cancel
-              </Button>
+              {successMessage && (
+                <div className="p-4 bg-[#d5f7ee] border border-[#2dd7a7] rounded-lg">
+                  <p className="text-[#008c65] text-sm">{successMessage}</p>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Button
+                  type="submit"
+                  disabled={loading || !currentAccount}
+                  className="flex-1"
+                  size="lg"
+                >
+                  {loading ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Creating Listing...
+                    </>
+                  ) : !currentAccount ? (
+                    'Connect Wallet to List'
+                  ) : (
+                    'Create Listing'
+                  )}
+                </Button>
+                <Link href="/" className="flex-1">
+                  <Button variant="outline" size="lg" className="w-full">
+                    Cancel
+                  </Button>
+                </Link>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+
+        {/* Tips Section */}
+        <Card className="max-w-2xl mx-auto mt-8">
+          <CardHeader>
+            <CardTitle>Tips for a Successful Listing</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4 text-sm text-[#636871]">
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-[#6fbcf0] text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                  1
+                </div>
+                <div>
+                  <h4 className="font-semibold text-[#182435] mb-1">Write a Clear Title</h4>
+                  <p>Use descriptive, specific titles that help buyers find your item</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-[#6fbcf0] text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                  2
+                </div>
+                <div>
+                  <h4 className="font-semibold text-[#182435] mb-1">Detailed Description</h4>
+                  <p>Include all relevant details, features, and any special characteristics</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-[#6fbcf0] text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                  3
+                </div>
+                <div>
+                  <h4 className="font-semibold text-[#182435] mb-1">Competitive Pricing</h4>
+                  <p>Research similar items to set a fair and competitive price</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <div className="w-6 h-6 bg-[#6fbcf0] text-white rounded-full flex items-center justify-center text-xs font-bold mt-0.5">
+                  4
+                </div>
+                <div>
+                  <h4 className="font-semibold text-[#182435] mb-1">Choose the Right Category</h4>
+                  <p>Select the most appropriate category to help buyers discover your item</p>
+                </div>
+              </div>
             </div>
-          </form>
-
-          {successMessage && (
-            <Card className="mt-4 border-green-500 bg-green-50 dark:bg-green-900/20">
-              <CardContent className="p-4">
-                <p className="text-green-800 dark:text-green-200 text-sm font-medium">
-                  {successMessage}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
-          {errorMessage && (
-            <Card className="mt-4 border-destructive">
-              <CardContent className="p-4">
-                <p className="text-destructive text-sm">{errorMessage}</p>
-              </CardContent>
-            </Card>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Help Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Need Help?</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div>
-            <h4 className="font-semibold text-sm mb-1">How to find your Object ID?</h4>
-            <p className="text-sm text-muted-foreground">
-              You can find your object IDs in your wallet under the "NFTs" or "Objects" section, 
-              or by using the Sui Explorer to browse your address.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-1">What is an Item Type?</h4>
-            <p className="text-sm text-muted-foreground">
-              The item type is the full Move type of your object. It typically looks like 
-              "0x2::devnet_nft::DevNFT" where 0x2 is the package address, devnet_nft is the module, 
-              and DevNFT is the type name.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-1">Fixed Price vs Auction</h4>
-            <p className="text-sm text-muted-foreground">
-              Fixed price listings are sold immediately when someone buys them. Auctions allow 
-              multiple people to bid, with the highest bidder winning when the auction ends.
-            </p>
-          </div>
-          <div>
-            <h4 className="font-semibold text-sm mb-1">Listing Fees</h4>
-            <p className="text-sm text-muted-foreground">
-              There are no listing fees. You only pay the standard Sui network gas fees for the transaction.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
     </main>
   );
 } 

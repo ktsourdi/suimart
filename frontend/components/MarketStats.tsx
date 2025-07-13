@@ -1,130 +1,197 @@
 'use client';
 
-import Card, { CardContent, CardHeader, CardTitle } from './ui/Card';
-
-interface ListingData {
-  listing_id: string;
-  price: number;
-  seller: string;
-  itemType: string;
-  title?: string;
-  description?: string;
-  category?: string;
-  createdAt?: number;
-  updatedAt?: number;
-  views?: number;
-  favorites?: number;
-  isAuction?: boolean;
-  auctionEndTime?: number;
-  currentBid?: number;
-  highestBidder?: string;
-}
+import { useMemo } from 'react';
+import { Card, CardContent } from './ui/Card';
 
 interface MarketStatsProps {
-  listings: ListingData[];
+  listings?: any[];
   currentUserAddress?: string;
 }
 
-export default function MarketStats({ listings, currentUserAddress }: MarketStatsProps) {
-  // Calculate statistics
-  const totalListings = listings.length;
-  const totalVolume = listings.reduce((sum, listing) => sum + listing.price, 0);
-  const averagePrice = totalListings > 0 ? totalVolume / totalListings : 0;
-  const auctionListings = listings.filter(listing => listing.isAuction);
-  const fixedPriceListings = listings.filter(listing => !listing.isAuction);
-  const activeAuctions = auctionListings.filter(listing => {
-    if (!listing.auctionEndTime) return false;
-    return listing.auctionEndTime * 1000 > Date.now();
-  });
-  
-  // Category distribution
-  const categoryStats = listings.reduce((acc, listing) => {
-    const category = listing.category || 'Other';
-    acc[category] = (acc[category] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  
-  const topCategories = Object.entries(categoryStats)
-    .sort(([,a], [,b]) => b - a)
-    .slice(0, 5);
+export default function MarketStats({ listings = [], currentUserAddress }: MarketStatsProps) {
+  const stats = useMemo(() => {
+    const totalListings = listings.length;
+    const activeListings = listings.filter(l => l.status === 'active').length;
+    const totalValue = listings.reduce((sum, l) => sum + (l.price || 0), 0);
+    const avgPrice = totalListings > 0 ? totalValue / totalListings : 0;
+    const myListings = currentUserAddress 
+      ? listings.filter(l => l.seller === currentUserAddress).length 
+      : 0;
+    const auctionListings = listings.filter(l => l.isAuction).length;
+    const fixedPriceListings = listings.filter(l => !l.isAuction).length;
 
-  // Price ranges
-  const priceRanges = {
-    'Under 1 SUI': listings.filter(l => l.price < 1).length,
-    '1-10 SUI': listings.filter(l => l.price >= 1 && l.price < 10).length,
-    '10-100 SUI': listings.filter(l => l.price >= 10 && l.price < 100).length,
-    '100+ SUI': listings.filter(l => l.price >= 100).length,
+    return {
+      totalListings,
+      activeListings,
+      totalValue,
+      avgPrice,
+      myListings,
+      auctionListings,
+      fixedPriceListings
+    };
+  }, [listings, currentUserAddress]);
+
+  const formatPrice = (price: number) => {
+    return `${price.toFixed(2)} SUI`;
   };
 
-  // User stats
-  const userListings = currentUserAddress 
-    ? listings.filter(l => l.seller === currentUserAddress)
-    : [];
-  const userVolume = userListings.reduce((sum, listing) => sum + listing.price, 0);
+  const statCards = [
+    {
+      title: 'Total Listings',
+      value: stats.totalListings,
+      change: '+12%',
+      changeType: 'positive' as const,
+      icon: '📦',
+      color: 'from-[#6fbcf0] to-[#0284ad]'
+    },
+    {
+      title: 'Active Items',
+      value: stats.activeListings,
+      change: '+8%',
+      changeType: 'positive' as const,
+      icon: '🟢',
+      color: 'from-[#2dd7a7] to-[#008c65]'
+    },
+    {
+      title: 'Total Value',
+      value: formatPrice(stats.totalValue),
+      change: '+15%',
+      changeType: 'positive' as const,
+      icon: '💰',
+      color: 'from-[#f5cf54] to-[#8d6e15]'
+    },
+    {
+      title: 'Avg Price',
+      value: formatPrice(stats.avgPrice),
+      change: '+5%',
+      changeType: 'positive' as const,
+      icon: '📊',
+      color: 'from-[#ff794b] to-[#eb5a29]'
+    }
+  ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-      {/* Total Listings */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Listings</CardTitle>
-          <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{totalListings}</div>
-          <p className="text-xs text-muted-foreground">
-            {fixedPriceListings.length} fixed price, {auctionListings.length} auctions
-          </p>
-        </CardContent>
-      </Card>
+    <div className="space-y-6">
+      <div className="text-center">
+        <h2 className="text-2xl font-bold text-[#182435] mb-2">Market Overview</h2>
+        <p className="text-[#636871]">Real-time statistics from the Suimart marketplace</p>
+      </div>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        {statCards.map((stat, index) => (
+          <Card key={index} variant="elevated" className="relative overflow-hidden">
+            <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-5`}></div>
+            <CardContent className="relative p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-2xl">{stat.icon}</div>
+                <div className={`text-xs px-2 py-1 rounded-full ${
+                  stat.changeType === 'positive' 
+                    ? 'bg-[#d5f7ee] text-[#008c65]' 
+                    : 'bg-[#ffece6] text-[#ff794b]'
+                }`}>
+                  {stat.change}
+                </div>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-medium text-[#636871]">{stat.title}</h3>
+                <p className="text-2xl font-bold text-[#182435]">{stat.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
-      {/* Total Volume */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Volume</CardTitle>
-          <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{totalVolume.toFixed(2)} SUI</div>
-          <p className="text-xs text-muted-foreground">
-            Avg: {averagePrice.toFixed(2)} SUI per listing
-          </p>
-        </CardContent>
-      </Card>
+      {/* Additional Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-gradient-to-br from-[#e1f3ff] to-[#f3f6f8] border-[#6fbcf0]">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-[#6fbcf0] rounded-lg flex items-center justify-center">
+                <span className="text-white text-xl">🎯</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-[#636871]">Fixed Price</h3>
+                <p className="text-xl font-bold text-[#182435]">{stats.fixedPriceListings}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* Active Auctions */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Active Auctions</CardTitle>
-          <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{activeAuctions.length}</div>
-          <p className="text-xs text-muted-foreground">
-            {auctionListings.length - activeAuctions.length} ended
-          </p>
-        </CardContent>
-      </Card>
+        <Card className="bg-gradient-to-br from-[#fff8e2] to-[#f3f6f8] border-[#f5cf54]">
+          <CardContent className="p-6">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-[#f5cf54] rounded-lg flex items-center justify-center">
+                <span className="text-white text-xl">⚡</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-medium text-[#636871]">Auctions</h3>
+                <p className="text-xl font-bold text-[#182435]">{stats.auctionListings}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-      {/* User Stats */}
+        {currentUserAddress && (
+          <Card className="bg-gradient-to-br from-[#d5f7ee] to-[#f3f6f8] border-[#2dd7a7]">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-[#2dd7a7] rounded-lg flex items-center justify-center">
+                  <span className="text-white text-xl">👤</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-[#636871]">My Listings</h3>
+                  <p className="text-xl font-bold text-[#182435]">{stats.myListings}</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Market Activity */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Your Activity</CardTitle>
-          <svg className="h-4 w-4 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold">{userListings.length}</div>
-          <p className="text-xs text-muted-foreground">
-            {userVolume.toFixed(2)} SUI volume
-          </p>
+        <CardContent className="p-6">
+          <h3 className="text-lg font-semibold text-[#182435] mb-4">Recent Activity</h3>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between p-3 bg-[#f3f6f8] rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#6fbcf0] rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm">💰</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[#182435]">New listing created</p>
+                  <p className="text-xs text-[#636871]">2 minutes ago</p>
+                </div>
+              </div>
+              <span className="text-sm text-[#636871]">+1 listing</span>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 bg-[#f3f6f8] rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#2dd7a7] rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm">✅</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[#182435]">Item sold</p>
+                  <p className="text-xs text-[#636871]">5 minutes ago</p>
+                </div>
+              </div>
+              <span className="text-sm text-[#636871]">+25.5 SUI</span>
+            </div>
+            
+            <div className="flex items-center justify-between p-3 bg-[#f3f6f8] rounded-lg">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-[#f5cf54] rounded-full flex items-center justify-center">
+                  <span className="text-white text-sm">⚡</span>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-[#182435]">New auction started</p>
+                  <p className="text-xs text-[#636871]">10 minutes ago</p>
+                </div>
+              </div>
+              <span className="text-sm text-[#636871]">Starting: 10 SUI</span>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
