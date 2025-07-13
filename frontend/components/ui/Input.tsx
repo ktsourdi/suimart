@@ -3,30 +3,35 @@ import { InputHTMLAttributes, forwardRef } from 'react';
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
-  helperText?: string;
+  variant?: 'default' | 'glass' | 'outline';
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className = '', label, error, helperText, ...props }, ref) => {
+  ({ className = '', label, error, variant = 'default', ...props }, ref) => {
+    const baseClasses = 'w-full px-4 py-3 rounded-xl border transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+    
+    const variantClasses = {
+      default: 'border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500/20',
+      glass: 'backdrop-blur-md bg-white/10 border-white/20 text-white placeholder-white/60 focus:border-white/40 focus:ring-white/20',
+      outline: 'border-2 border-gray-300 dark:border-slate-600 bg-transparent text-gray-900 dark:text-gray-100 focus:border-blue-500 focus:ring-blue-500/20'
+    };
+    
+    const classes = `${baseClasses} ${variantClasses[variant]} ${className}`;
+    
     return (
-      <div className="w-full">
+      <div className="space-y-2">
         {label && (
-          <label className="block text-sm font-medium text-[#182435] mb-2">
+          <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
             {label}
           </label>
         )}
         <input
           ref={ref}
-          className={`w-full px-4 py-3 border-2 border-[#cbd5e1] bg-white text-[#182435] rounded-lg transition-all duration-200 focus:outline-none focus:border-[#6fbcf0] focus:ring-2 focus:ring-[#6fbcf0] focus:ring-opacity-20 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-[#9ca3af] ${
-            error ? 'border-[#ff794b] focus:border-[#ff794b] focus:ring-[#ff794b]' : ''
-          } ${className}`}
+          className={classes}
           {...props}
         />
         {error && (
-          <p className="mt-1 text-sm text-[#ff794b]">{error}</p>
-        )}
-        {helperText && !error && (
-          <p className="mt-1 text-sm text-[#636871]">{helperText}</p>
+          <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
         )}
       </div>
     );
