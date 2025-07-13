@@ -1,33 +1,34 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'destructive' | 'ghost' | 'outline';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   loading?: boolean;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'primary', size = 'md', loading, children, disabled, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none';
+  ({ className = '', variant = 'primary', size = 'md', loading = false, children, disabled, ...props }, ref) => {
+    const baseClasses = 'inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
     
-    const variants = {
-      primary: 'bg-primary text-primary-foreground hover:bg-primary/90',
-      secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-      destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-      ghost: 'hover:bg-accent hover:text-accent-foreground',
-      outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
+    const variantClasses = {
+      primary: 'bg-[#6fbcf0] text-white border border-[#6fbcf0] hover:bg-[#1f6493] hover:border-[#1f6493] focus:ring-[#6fbcf0] shadow-sm hover:shadow-md hover:-translate-y-0.5',
+      secondary: 'bg-[#e1f3ff] text-[#1f6493] border border-[#6fbcf0] hover:bg-[#6fbcf0] hover:text-white focus:ring-[#6fbcf0]',
+      outline: 'bg-transparent text-[#6fbcf0] border-2 border-[#6fbcf0] hover:bg-[#6fbcf0] hover:text-white focus:ring-[#6fbcf0]',
+      ghost: 'bg-transparent text-[#636871] border border-transparent hover:bg-[#f3f6f8] hover:text-[#182435] focus:ring-[#6fbcf0]'
     };
-
-    const sizes = {
+    
+    const sizeClasses = {
       sm: 'px-3 py-1.5 text-sm',
-      md: 'px-4 py-2',
-      lg: 'px-6 py-3 text-lg',
+      md: 'px-4 py-2 text-sm',
+      lg: 'px-6 py-3 text-base'
     };
-
+    
+    const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
+    
     return (
       <button
         ref={ref}
-        className={`${baseStyles} ${variants[variant]} ${sizes[size]} ${className}`}
+        className={classes}
         disabled={disabled || loading}
         {...props}
       >
