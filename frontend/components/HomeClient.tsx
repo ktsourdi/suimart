@@ -42,14 +42,14 @@ export default function HomeClient() {
   const [sortBy, setSortBy] = useState<string>("newest");
 
   const categories = [
-    { id: "all", name: "All Categories" },
-    { id: "nfts", name: "NFTs" },
-    { id: "gaming", name: "Gaming" },
-    { id: "art", name: "Art" },
-    { id: "collectibles", name: "Collectibles" },
-    { id: "music", name: "Music" },
-    { id: "sports", name: "Sports" },
-    { id: "virtual-worlds", name: "Virtual Worlds" },
+    { id: "all", name: "All Categories", icon: "🎯" },
+    { id: "nfts", name: "NFTs", icon: "🖼️" },
+    { id: "gaming", name: "Gaming", icon: "🎮" },
+    { id: "art", name: "Art", icon: "🎨" },
+    { id: "collectibles", name: "Collectibles", icon: "💎" },
+    { id: "music", name: "Music", icon: "🎵" },
+    { id: "sports", name: "Sports", icon: "⚽" },
+    { id: "virtual-worlds", name: "Virtual Worlds", icon: "🌍" },
   ];
 
   const sortOptions = [
@@ -154,40 +154,45 @@ export default function HomeClient() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-[#f8fafc] to-[#e1f3ff]">
-      {/* Header Section */}
-      <div className="bg-white border-b border-[#e3e6e8]">
-        <div className="max-w-7xl mx-auto px-6 py-8">
-          <div className="text-center">
-            <h1 className="text-4xl md:text-6xl font-bold mb-4">
-              <span className="bg-gradient-to-r from-[#6fbcf0] to-[#0284ad] bg-clip-text text-transparent">
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/10 to-pink-600/10"></div>
+        <div className="absolute top-0 left-0 w-72 h-72 bg-gradient-to-br from-blue-400/20 to-purple-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full blur-3xl"></div>
+        
+        <div className="relative max-w-7xl mx-auto px-6 py-16">
+          <div className="text-center animate-fade-in">
+            <h1 className="text-5xl md:text-7xl font-bold mb-6">
+              <span className="text-gradient">
                 Suimart
               </span>
             </h1>
-            <p className="text-xl text-[#636871] mb-8 max-w-2xl mx-auto">
-              The premier marketplace for Sui blockchain assets. Buy, sell, and discover unique digital items.
+            <p className="text-xl md:text-2xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto leading-relaxed">
+              The premier marketplace for Sui blockchain assets. Discover, buy, and sell unique digital items with unparalleled ease.
             </p>
             {MOCK_MODE && (
-              <div className="inline-flex items-center px-4 py-2 bg-[#fff8e2] border border-[#f5cf54] rounded-lg text-[#8d6e15] text-sm font-medium mb-6">
-                <span className="w-2 h-2 bg-[#f5cf54] rounded-full mr-2"></span>
+              <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-amber-100 to-orange-100 dark:from-amber-900/30 dark:to-orange-900/30 border border-amber-200 dark:border-amber-700 rounded-2xl text-amber-800 dark:text-amber-200 text-sm font-medium mb-8 animate-bounce-in">
+                <span className="w-3 h-3 bg-amber-500 rounded-full mr-3 animate-pulse"></span>
                 Mock Mode - Demo Environment
               </div>
             )}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-12">
               {!currentAccount ? (
-                <Button onClick={connect} size="lg" className="text-lg px-8 py-4">
+                <Button onClick={connect} size="xl" variant="gradient" glow className="text-lg">
                   Connect Wallet
                 </Button>
               ) : (
-                <div className="flex items-center gap-4">
-                  <span className="text-[#636871]">Connected:</span>
-                  <span className="font-mono text-[#182435] bg-[#f3f6f8] px-3 py-1 rounded">
+                <div className="flex items-center gap-4 p-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md rounded-2xl border border-white/20 dark:border-slate-700/50">
+                  <span className="text-gray-600 dark:text-gray-300">Connected:</span>
+                  <span className="font-mono text-gray-900 dark:text-gray-100 bg-gray-100 dark:bg-slate-700 px-4 py-2 rounded-xl">
                     {formatAddress(currentAccount.address)}
                   </span>
                 </div>
               )}
               <Link href="/sell">
-                <Button variant="outline" size="lg" className="text-lg px-8 py-4">
+                <Button variant="glass" size="xl" className="text-lg">
                   Sell Your Item
                 </Button>
               </Link>
@@ -197,137 +202,156 @@ export default function HomeClient() {
       </div>
 
       {/* Stats Section */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-6 py-12">
         <MarketStats />
       </div>
 
-      {/* Filters Section */}
-      <div className="max-w-7xl mx-auto px-6 py-6">
-        <div className="bg-white rounded-xl border border-[#e3e6e8] p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              placeholder="Search items..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="md:col-span-1"
-            />
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-3 border-2 border-[#cbd5e1] bg-white text-[#182435] rounded-lg transition-all duration-200 focus:outline-none focus:border-[#6fbcf0] focus:ring-2 focus:ring-[#6fbcf0] focus:ring-opacity-20"
-            >
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-3 border-2 border-[#cbd5e1] bg-white text-[#182435] rounded-lg transition-all duration-200 focus:outline-none focus:border-[#6fbcf0] focus:ring-2 focus:ring-[#6fbcf0] focus:ring-opacity-20"
-            >
-              {sortOptions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
+      {/* Search and Filter Section */}
+      <div className="max-w-7xl mx-auto px-6 py-8">
+        <div className="glass-effect rounded-3xl p-8 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Search */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Search Items</label>
+              <Input
+                type="text"
+                placeholder="Search by title, description, or category..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full"
+              />
+            </div>
+            
+            {/* Category Filter */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Category</label>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              >
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {category.icon} {category.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Sort */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Sort By</label>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-4 py-3 rounded-xl border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.id} value={option.id}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Listings Grid */}
-      <div className="max-w-7xl mx-auto px-6 pb-12">
+      <div className="max-w-7xl mx-auto px-6 pb-16">
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[...Array(8)].map((_, i) => (
-              <Card key={i} className="animate-pulse">
-                <div className="h-48 bg-[#f3f6f8] rounded-t-xl"></div>
-                <CardContent>
-                  <div className="h-4 bg-[#f3f6f8] rounded mb-2"></div>
-                  <div className="h-3 bg-[#f3f6f8] rounded mb-4"></div>
-                  <div className="h-6 bg-[#f3f6f8] rounded"></div>
-                </CardContent>
-              </Card>
+              <div key={i} className="card-hover glass-effect rounded-2xl p-6 animate-pulse">
+                <div className="skeleton h-48 rounded-xl mb-4"></div>
+                <div className="skeleton h-4 rounded mb-2"></div>
+                <div className="skeleton h-4 rounded w-3/4 mb-4"></div>
+                <div className="skeleton h-6 rounded w-1/2"></div>
+              </div>
             ))}
           </div>
         ) : filteredAndSortedListings.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">📦</div>
-            <h3 className="text-2xl font-semibold text-[#182435] mb-2">No items found</h3>
-            <p className="text-[#636871] mb-6">Try adjusting your search or filters</p>
-            <Link href="/sell">
-              <Button>List Your First Item</Button>
-            </Link>
+          <div className="text-center py-16">
+            <div className="text-6xl mb-4">�</div>
+            <h3 className="text-2xl font-semibold text-gray-700 dark:text-gray-300 mb-2">No items found</h3>
+            <p className="text-gray-500 dark:text-gray-400">Try adjusting your search criteria or browse all categories.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredAndSortedListings.map((listing) => (
-              <Card key={listing.listing_id} variant="elevated" className="overflow-hidden">
-                <div className="relative">
-                  <div className="h-48 bg-gradient-to-br from-[#6fbcf0] to-[#0284ad] flex items-center justify-center">
-                    {listing.imageUrl ? (
-                      <img
-                        src={listing.imageUrl}
-                        alt={listing.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-white text-4xl">🎨</div>
-                    )}
-                    {listing.isAuction && (
-                      <div className="absolute top-2 right-2 bg-[#f5cf54] text-[#8d6e15] px-2 py-1 rounded text-xs font-medium">
-                        Auction
-                      </div>
-                    )}
+            {filteredAndSortedListings.map((listing, index) => (
+              <div
+                key={listing.listing_id}
+                className="card-hover glass-effect rounded-2xl p-6 animate-slide-up"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <div className="relative mb-4">
+                  <div className="w-full h-48 bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl flex items-center justify-center">
+                    <span className="text-4xl">
+                      {listing.category === 'nfts' ? '🖼️' :
+                       listing.category === 'gaming' ? '🎮' :
+                       listing.category === 'art' ? '🎨' :
+                       listing.category === 'collectibles' ? '💎' :
+                       listing.category === 'music' ? '🎵' :
+                       listing.category === 'sports' ? '⚽' :
+                       listing.category === 'virtual-worlds' ? '�' : '📦'}
+                    </span>
                   </div>
+                  {listing.isAuction && (
+                    <div className="absolute top-2 right-2 bg-gradient-to-r from-orange-500 to-red-500 text-white text-xs px-2 py-1 rounded-full font-semibold">
+                      Auction
+                    </div>
+                  )}
                 </div>
-                <CardContent>
-                  <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-[#182435] text-lg truncate">
-                      {listing.title || "Untitled Item"}
-                    </h3>
-                    <span className="text-[#636871] text-sm">
-                      {listing.category}
-                    </span>
-                  </div>
-                  <p className="text-[#636871] text-sm mb-4 line-clamp-2">
-                    {listing.description || "No description available"}
+                
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-lg text-gray-900 dark:text-gray-100 line-clamp-2">
+                    {listing.title || `${listing.itemType} #${listing.listing_id.slice(-6)}`}
+                  </h3>
+                  
+                  <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    {listing.description || "A unique digital item on the Sui blockchain."}
                   </p>
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="text-2xl font-bold text-[#6fbcf0]">
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="text-2xl font-bold text-gradient">
                       {formatPrice(listing.price)}
-                    </span>
-                    <div className="flex items-center gap-2 text-[#636871] text-sm">
-                      <span>👁 {listing.views || 0}</span>
-                      <span>❤️ {listing.favorites || 0}</span>
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {listing.views || 0} views
                     </div>
                   </div>
-                  <div className="flex justify-between items-center text-xs text-[#636871] mb-4">
-                    <span>Seller: {formatAddress(listing.seller)}</span>
-                    <span>{formatDate(listing.createdAt || Date.now())}</span>
+                  
+                  <div className="text-xs text-gray-500 dark:text-gray-400">
+                    Seller: {formatAddress(listing.seller)}
                   </div>
-                  <div className="flex gap-2">
+                  
+                  {listing.createdAt && (
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Listed: {formatDate(listing.createdAt)}
+                    </div>
+                  )}
+                  
+                  <div className="flex gap-2 pt-2">
                     <Button
                       onClick={() => handleBuy(listing.listing_id)}
+                      size="sm"
+                      variant="primary"
                       className="flex-1"
-                      disabled={!currentAccount}
                     >
-                      {currentAccount ? "Buy Now" : "Connect to Buy"}
+                      Buy Now
                     </Button>
                     {currentAccount && listing.seller === currentAccount.address && (
                       <Button
-                        variant="outline"
                         onClick={() => handleCancel(listing.listing_id)}
-                        className="px-3"
+                        size="sm"
+                        variant="outline"
                       >
                         Cancel
                       </Button>
                     )}
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
         )}

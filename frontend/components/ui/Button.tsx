@@ -1,29 +1,35 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'gradient' | 'glass';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   loading?: boolean;
+  glow?: boolean;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'primary', size = 'md', loading = false, children, disabled, ...props }, ref) => {
-    const baseClasses = 'inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  ({ className = '', variant = 'primary', size = 'md', loading = false, glow = false, children, disabled, ...props }, ref) => {
+    const baseClasses = 'inline-flex items-center justify-center font-semibold rounded-xl transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden';
     
-    const variantClasses = {
-      primary: 'bg-[#6fbcf0] text-white border border-[#6fbcf0] hover:bg-[#1f6493] hover:border-[#1f6493] focus:ring-[#6fbcf0] shadow-sm hover:shadow-md hover:-translate-y-0.5',
-      secondary: 'bg-[#e1f3ff] text-[#1f6493] border border-[#6fbcf0] hover:bg-[#6fbcf0] hover:text-white focus:ring-[#6fbcf0]',
-      outline: 'bg-transparent text-[#6fbcf0] border-2 border-[#6fbcf0] hover:bg-[#6fbcf0] hover:text-white focus:ring-[#6fbcf0]',
-      ghost: 'bg-transparent text-[#636871] border border-transparent hover:bg-[#f3f6f8] hover:text-[#182435] focus:ring-[#6fbcf0]'
+    const variantClasses: Record<string, string> = {
+      primary: 'bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0 hover:from-blue-700 hover:to-purple-700 focus:ring-blue-500 shadow-lg hover:shadow-xl hover:-translate-y-0.5',
+      secondary: 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-800 border border-gray-300 hover:from-gray-200 hover:to-gray-300 focus:ring-gray-500 shadow-md hover:shadow-lg',
+      outline: 'bg-transparent text-blue-600 border-2 border-blue-600 hover:bg-blue-600 hover:text-white focus:ring-blue-500 shadow-sm hover:shadow-md',
+      ghost: 'bg-transparent text-gray-600 border border-transparent hover:bg-gray-100 hover:text-gray-900 focus:ring-gray-500',
+      gradient: 'bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 text-white border-0 hover:from-purple-700 hover:via-pink-700 hover:to-red-700 focus:ring-purple-500 shadow-lg hover:shadow-xl hover:-translate-y-0.5',
+      glass: 'backdrop-blur-md bg-white/10 border border-white/20 text-white hover:bg-white/20 focus:ring-white/50 shadow-lg hover:shadow-xl'
     };
     
-    const sizeClasses = {
-      sm: 'px-3 py-1.5 text-sm',
-      md: 'px-4 py-2 text-sm',
-      lg: 'px-6 py-3 text-base'
+    const sizeClasses: Record<string, string> = {
+      sm: 'px-4 py-2 text-sm',
+      md: 'px-6 py-3 text-sm',
+      lg: 'px-8 py-4 text-base',
+      xl: 'px-10 py-5 text-lg'
     };
     
-    const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
+    const glowClasses = glow ? 'button-glow' : '';
+    
+    const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${glowClasses} ${className}`;
     
     return (
       <button
