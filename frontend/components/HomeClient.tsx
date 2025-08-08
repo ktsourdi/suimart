@@ -8,6 +8,7 @@ import Input from "./ui/Input";
 import MarketStats from "./MarketStats";
 import { mockMarketplace, MockListing } from "../lib/mockData";
 import { MOCK_MODE } from "../lib/config";
+import { ConnectButton } from '@mysten/dapp-kit';
 
 interface ListingData {
   listing_id: string;
@@ -175,9 +176,7 @@ export default function HomeClient() {
             )}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               {!currentAccount ? (
-                <Button onClick={connect} size="lg" className="text-lg px-8 py-4">
-                  Connect Wallet
-                </Button>
+                <ConnectButton />
               ) : (
                 <div className="flex items-center gap-4">
                   <span className="text-[#636871]">Connected:</span>
