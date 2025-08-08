@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useWalletKit } from '@mysten/wallet-kit';
-import { JsonRpcProvider } from '@mysten/sui.js';
+import { useCurrentAccount } from '@mysten/dapp-kit';
+import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { PACKAGE_ID, SUI_NETWORK } from '../lib/config';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Button from './ui/Button';
@@ -21,12 +21,12 @@ interface UserProfile {
 }
 
 export default function ProfileClient() {
-  const { currentAccount, signAndExecuteTransactionBlock } = useWalletKit();
+  const currentAccount = useCurrentAccount();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [provider, setProvider] = useState<JsonRpcProvider | null>(null);
+  const [provider, setProvider] = useState<SuiClient | null>(null);
 
   // Form state
   const [username, setUsername] = useState('');
@@ -35,11 +35,8 @@ export default function ProfileClient() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const rpcProvider = new JsonRpcProvider({
-        fullnode: `https://fullnode.${SUI_NETWORK}.sui.io`,
-        websocket: `wss://fullnode.${SUI_NETWORK}.sui.io`,
-      } as any);
-      setProvider(rpcProvider);
+      const client = new SuiClient({ url: getFullnodeUrl(SUI_NETWORK) });
+      setProvider(client);
     }
   }, []);
 

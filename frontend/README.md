@@ -4,7 +4,7 @@ A peer-to-peer marketplace built on the Sui blockchain using Next.js.
 
 ## Features
 
-- **Connect Wallet**: Integrate with Sui wallets using @mysten/wallet-kit
+- **Connect Wallet**: Integrate with Sui wallets using @mysten/dapp-kit
 - **List Items**: Create marketplace listings for your digital assets
 - **Buy Items**: Purchase items directly with SUI tokens
 - **Responsive Design**: Modern UI built with Tailwind CSS
@@ -80,12 +80,12 @@ This frontend expects a Sui Move package with the following functionality:
 - **Framework**: Next.js 14 with App Router
 - **Styling**: Tailwind CSS
 - **Blockchain**: Sui blockchain integration
-- **Wallet**: @mysten/wallet-kit for wallet connections
+- **Wallet**: @mysten/dapp-kit for wallet connections
 - **Build**: Static export for optimal performance
 
 ## Known Issues
 
-- The application uses deprecated `@mysten/wallet-kit` and `@mysten/sui.js` packages
+- The application now uses `@mysten/dapp-kit` and `@mysten/sui` (latest)
 - Consider upgrading to `@mysten/dapp-kit` and `@mysten/sui` for better long-term support
 
 ## Contributing
