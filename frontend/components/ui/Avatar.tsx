@@ -1,3 +1,5 @@
+import Image from 'next/image';
+
 const Avatar = ({ src, alt, size = 'md', className = '' }: { src?: string; alt: string; size?: 'sm' | 'md' | 'lg'; className?: string }) => {
   const sizeClasses = {
     sm: 'w-8 h-8',
@@ -6,9 +8,9 @@ const Avatar = ({ src, alt, size = 'md', className = '' }: { src?: string; alt: 
   };
 
   return (
-    <div className={`${sizeClasses[size]} rounded-full bg-gray-300 flex items-center justify-center ${className}`}>
+    <div className={`${sizeClasses[size]} rounded-full bg-gray-300 flex items-center justify-center overflow-hidden ${className}`}>
       {src ? (
-        <img src={src} alt={alt} className="w-full h-full rounded-full object-cover" />
+        <Image src={src} alt={alt} width={96} height={96} className="w-full h-full rounded-full object-cover" />
       ) : (
         <span className="text-gray-600 font-medium">
           {alt.charAt(0).toUpperCase()}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { PACKAGE_ID, SUI_NETWORK } from '../lib/config';
@@ -42,7 +42,7 @@ export default function ProfileClient() {
     }
   }, []);
 
-  const fetchProfile = async () => {
+  const fetchProfile = useCallback(async () => {
     if (!currentAccount || !provider) return;
 
     try {
@@ -69,13 +69,13 @@ export default function ProfileClient() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [currentAccount, provider]);
 
   useEffect(() => {
     if (currentAccount) {
       fetchProfile();
     }
-  }, [currentAccount]);
+  }, [currentAccount, fetchProfile]);
 
   const handleCreateProfile = async () => {
     if (!currentAccount || !PACKAGE_ID) {
