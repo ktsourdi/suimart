@@ -8,6 +8,10 @@ import Input from "./ui/Input";
 import MarketStats from "./MarketStats";
 import { mockMarketplace, MockListing } from "../lib/mockData";
 import { MOCK_MODE } from "../lib/config";
+import { ConnectButton } from '@mysten/dapp-kit';
+import { useListings, useSuiClient } from '../lib/suiClient';
+import { useToast } from './ToastProvider';
+import NetworkBanner from './NetworkBanner';
 
 interface ListingData {
   listing_id: string;
@@ -34,9 +38,10 @@ export default function HomeClient() {
     currentAccount,
     connect,
   } = useWallet();
-
+  const sui = useSuiClient();
+  const { data: listingsData, isLoading, refetch } = useListings();
   const [listings, setListings] = useState<ListingData[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
@@ -60,23 +65,19 @@ export default function HomeClient() {
     { id: "popular", name: "Most Popular" },
   ];
 
-  const fetchListings = useCallback(async () => {
-    setLoading(true);
-    try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const mockListings = await mockMarketplace.getListings();
-      setListings(mockListings);
-    } catch (error) {
-      console.error("Failed to fetch listings:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
+    let active = true;
+    const run = async () => {
+      if (MOCK_MODE) {
+        const data = await mockMarketplace.getListings();
+        if (active) setListings(data as any);
+      } else if (listingsData) {
+        setListings(listingsData as any);
+      }
+    };
+    run();
+    return () => { active = false; };
+  }, [listingsData]);
 
   const filteredAndSortedListings = useMemo(() => {
     let filtered = listings.filter((listing) => {
@@ -111,33 +112,55 @@ export default function HomeClient() {
 
   const handleBuy = async (listingId: string) => {
     if (!currentAccount) {
-      alert("Please connect your wallet first.");
+      showToast('info', 'Please connect your wallet first.');
       return;
     }
 
     try {
-      await mockMarketplace.buyItem(listingId, currentAccount.address);
-      alert("Purchase successful! The item has been transferred to your wallet.");
-      fetchListings(); // Refresh listings
+      if (MOCK_MODE) {
+        await mockMarketplace.buyItem(listingId, currentAccount.address);
+      } else {
+        const l = listings.find(l => l.listing_id === listingId);
+        if (!l) throw new Error('Listing not found');
+        await sui.buyItem(l.listing_id, l.itemType, l.price);
+      }
+      showToast('success', 'Purchase successful!');
+      if (MOCK_MODE) {
+        const data = await mockMarketplace.getListings();
+        setListings(data as any);
+      } else {
+        await refetch();
+      }
     } catch (error) {
       console.error("Purchase failed:", error);
-      alert("Purchase failed. Please try again.");
+      showToast('error', 'Purchase failed. Please try again.');
     }
   };
 
   const handleCancel = async (listingId: string) => {
     if (!currentAccount) {
-      alert("Please connect your wallet first.");
+      showToast('info', 'Please connect your wallet first.');
       return;
     }
 
     try {
-      await mockMarketplace.cancelListing(listingId, currentAccount.address);
-      alert("Listing cancelled successfully!");
-      fetchListings(); // Refresh listings
+      if (MOCK_MODE) {
+        await mockMarketplace.cancelListing(listingId, currentAccount.address);
+      } else {
+        const l = listings.find(l => l.listing_id === listingId);
+        if (!l) throw new Error('Listing not found');
+        await sui.cancelListing(l.listing_id, l.itemType);
+      }
+      showToast('success', 'Listing cancelled successfully!');
+      if (MOCK_MODE) {
+        const data = await mockMarketplace.getListings();
+        setListings(data as any);
+      } else {
+        await refetch();
+      }
     } catch (error) {
       console.error("Cancellation failed:", error);
-      alert("Cancellation failed. Please try again.");
+      showToast('error', 'Cancellation failed. Please try again.');
     }
   };
 
@@ -155,6 +178,7 @@ export default function HomeClient() {
 
   return (
     <main className="min-h-screen bg-gradient-to-br from-[#f8fafc] to-[#e1f3ff]">
+      <NetworkBanner />
       {/* Header Section */}
       <div className="bg-white border-b border-[#e3e6e8]">
         <div className="max-w-7xl mx-auto px-6 py-8">
@@ -175,9 +199,7 @@ export default function HomeClient() {
             )}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               {!currentAccount ? (
-                <Button onClick={connect} size="lg" className="text-lg px-8 py-4">
-                  Connect Wallet
-                </Button>
+                <ConnectButton />
               ) : (
                 <div className="flex items-center gap-4">
                   <span className="text-[#636871]">Connected:</span>
@@ -239,7 +261,7 @@ export default function HomeClient() {
 
       {/* Listings Grid */}
       <div className="max-w-7xl mx-auto px-6 pb-12">
-        {loading ? (
+        {(((MOCK_MODE && isLoading && listings.length === 0) || (!MOCK_MODE && isLoading))) ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[...Array(8)].map((_, i) => (
               <Card key={i} className="animate-pulse">
@@ -304,18 +326,21 @@ export default function HomeClient() {
                       <span>❤️ {listing.favorites || 0}</span>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center text-xs text-[#636871] mb-4">
-                    <span>Seller: {formatAddress(listing.seller)}</span>
-                    <span>{formatDate(listing.createdAt || Date.now())}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleBuy(listing.listing_id)}
-                      className="flex-1"
-                      disabled={!currentAccount}
-                    >
-                      {currentAccount ? "Buy Now" : "Connect to Buy"}
-                    </Button>
+                   <div className="flex justify-between items-center text-xs text-[#636871] mb-4">
+                     <span>Seller: {formatAddress(listing.seller)}</span>
+                     <span>{formatDate(listing.createdAt || Date.now())}</span>
+                   </div>
+                   <div className="flex gap-2">
+                     <Link href={`/listing?id=${listing.listing_id}`} className="flex-1">
+                       <Button className="w-full">View</Button>
+                     </Link>
+                     <Button
+                       onClick={() => handleBuy(listing.listing_id)}
+                       className="flex-1"
+                       disabled={!currentAccount || listing.isAuction}
+                     >
+                       {listing.isAuction ? 'Bid' : (currentAccount ? 'Buy Now' : 'Connect to Buy')}
+                     </Button>
                     {currentAccount && listing.seller === currentAccount.address && (
                       <Button
                         variant="outline"

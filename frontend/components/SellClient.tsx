@@ -10,19 +10,27 @@ import Textarea from './ui/Textarea';
 import Link from 'next/link';
 import { mockMarketplace } from '../lib/mockData';
 import { MOCK_MODE } from '../lib/config';
+import { useSuiClient } from '../lib/suiClient';
+import { useToast } from './ToastProvider';
 
 interface ValidationErrors {
   title?: string;
   description?: string;
   price?: string;
   category?: string;
+  itemObjectId?: string;
+  itemType?: string;
 }
 
 export default function SellClient() {
+  const sui = useSuiClient();
+  const { showToast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
+  const [itemObjectId, setItemObjectId] = useState('');
+  const [itemType, setItemType] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -70,6 +78,15 @@ export default function SellClient() {
       errors.category = 'Category is required';
     }
 
+    if (!MOCK_MODE) {
+      if (!itemObjectId.trim()) {
+        errors.itemObjectId = 'Object ID is required in real mode';
+      }
+      if (!itemType.trim()) {
+        errors.itemType = 'Item type is required in real mode';
+      }
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -91,26 +108,39 @@ export default function SellClient() {
     setSuccessMessage(null);
 
     try {
-      // Simulate transaction delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      await mockMarketplace.createListing({
-        title: title.trim(),
-        description: description.trim(),
-        price: parseFloat(price),
-        category,
-        seller: currentAccount.address,
-        itemType: 'sui::coin::Coin<0x2::sui::SUI>',
-        isAuction: false
-      });
+      if (MOCK_MODE) {
+        await mockMarketplace.createListing({
+          title: title.trim(),
+          description: description.trim(),
+          price: parseFloat(price),
+          category,
+          seller: currentAccount.address,
+          itemType: '0x2::devnet_nft::DevNFT',
+          isAuction: false
+        });
+      } else {
+        await sui.createListing({
+          itemType: itemType.trim(),
+          itemObjectId: itemObjectId.trim(),
+          price: parseFloat(price),
+          title: title.trim(),
+          description: description.trim(),
+          category,
+        });
+      }
 
       setSuccessMessage("Item listed successfully! Redirecting to marketplace...");
+      showToast('success', 'Item listed successfully!');
       
       // Reset form
       setTitle('');
       setDescription('');
       setPrice('');
       setCategory('');
+      setItemObjectId('');
+      setItemType('');
       setValidationErrors({});
 
       // Redirect after a short delay
@@ -121,6 +151,7 @@ export default function SellClient() {
     } catch (error) {
       console.error('Failed to create listing:', error);
       setErrorMessage("Failed to create listing. Please try again.");
+      showToast('error', 'Failed to create listing.');
     } finally {
       setLoading(false);
     }
@@ -243,6 +274,43 @@ export default function SellClient() {
                   <p className="mt-1 text-sm text-[#ff794b]">{validationErrors.category}</p>
                 )}
               </div>
+
+              {!MOCK_MODE && (
+                <>
+                  {/* Object ID */}
+                  <Input
+                    label="Item Object ID"
+                    placeholder="0x..."
+                    value={itemObjectId}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      setItemObjectId(e.target.value);
+                      if (validationErrors.itemObjectId) {
+                        setValidationErrors({ ...validationErrors, itemObjectId: undefined });
+                      }
+                    }}
+                    error={validationErrors.itemObjectId}
+                    disabled={loading}
+                    required
+                  />
+
+                  {/* Type */}
+                  <Input
+                    label="Item Type"
+                    placeholder="0x...::module::Type"
+                    value={itemType}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      setItemType(e.target.value);
+                      if (validationErrors.itemType) {
+                        setValidationErrors({ ...validationErrors, itemType: undefined });
+                      }
+                    }}
+                    error={validationErrors.itemType}
+                    disabled={loading}
+                    required
+                    helperText="Fully-qualified Move type of the listed object"
+                  />
+                </>
+              )}
 
               {/* Error/Success Messages */}
               {errorMessage && (
