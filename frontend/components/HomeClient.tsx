@@ -304,18 +304,21 @@ export default function HomeClient() {
                       <span>❤️ {listing.favorites || 0}</span>
                     </div>
                   </div>
-                  <div className="flex justify-between items-center text-xs text-[#636871] mb-4">
-                    <span>Seller: {formatAddress(listing.seller)}</span>
-                    <span>{formatDate(listing.createdAt || Date.now())}</span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleBuy(listing.listing_id)}
-                      className="flex-1"
-                      disabled={!currentAccount}
-                    >
-                      {currentAccount ? "Buy Now" : "Connect to Buy"}
-                    </Button>
+                                     <div className="flex justify-between items-center text-xs text-[#636871] mb-4">
+                     <span>Seller: {formatAddress(listing.seller)}</span>
+                     <span>{formatDate(listing.createdAt || Date.now())}</span>
+                   </div>
+                   <div className="flex gap-2">
+                     <Link href={`/listing?id=${listing.listing_id}`} className="flex-1">
+                       <Button className="w-full">View</Button>
+                     </Link>
+                     <Button
+                       onClick={() => handleBuy(listing.listing_id)}
+                       className="flex-1"
+                       disabled={!currentAccount || listing.isAuction}
+                     >
+                       {listing.isAuction ? 'Bid' : (currentAccount ? 'Buy Now' : 'Connect to Buy')}
+                     </Button>
                     {currentAccount && listing.seller === currentAccount.address && (
                       <Button
                         variant="outline"
