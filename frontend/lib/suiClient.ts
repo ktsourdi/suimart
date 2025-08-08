@@ -3,6 +3,7 @@ import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 import { SUI_NETWORK } from './config';
+import { useQuery } from '@tanstack/react-query';
 
 export interface CreateListingInput {
   // Placeholder: real typed item object ref must be passed
@@ -203,4 +204,14 @@ export function useSuiClient() {
       return signer.mutateAsync({ transaction: tx });
     },
   };
+}
+
+export function useListings() {
+  const sui = useSuiClient();
+  return useQuery({
+    queryKey: ['listings', SUI_NETWORK, PACKAGE_ID],
+    queryFn: () => sui.getListings(),
+    staleTime: 30_000,
+    refetchOnWindowFocus: false,
+  });
 }

@@ -9,7 +9,7 @@ import MarketStats from "./MarketStats";
 import { mockMarketplace, MockListing } from "../lib/mockData";
 import { MOCK_MODE } from "../lib/config";
 import { ConnectButton } from '@mysten/dapp-kit';
-import { useSuiClient } from '../lib/suiClient';
+import { useListings, useSuiClient } from '../lib/suiClient';
 
 interface ListingData {
   listing_id: string;
@@ -37,9 +37,8 @@ export default function HomeClient() {
     connect,
   } = useWallet();
   const sui = useSuiClient();
-
+  const { data: listingsData, isLoading, refetch } = useListings();
   const [listings, setListings] = useState<ListingData[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
@@ -63,22 +62,19 @@ export default function HomeClient() {
     { id: "popular", name: "Most Popular" },
   ];
 
-  const fetchListings = useCallback(async () => {
-    setLoading(true);
-    try {
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const data = MOCK_MODE ? await mockMarketplace.getListings() : await sui.getListings();
-      setListings(data as any);
-    } catch (error) {
-      console.error("Failed to fetch listings:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [sui]);
-
   useEffect(() => {
-    fetchListings();
-  }, [fetchListings]);
+    let active = true;
+    const run = async () => {
+      if (MOCK_MODE) {
+        const data = await mockMarketplace.getListings();
+        if (active) setListings(data as any);
+      } else if (listingsData) {
+        setListings(listingsData as any);
+      }
+    };
+    run();
+    return () => { active = false; };
+  }, [listingsData]);
 
   const filteredAndSortedListings = useMemo(() => {
     let filtered = listings.filter((listing) => {
@@ -126,7 +122,12 @@ export default function HomeClient() {
         await sui.buyItem(l.listing_id, l.itemType, l.price);
       }
       alert("Purchase successful! The item has been transferred to your wallet.");
-      fetchListings();
+      if (MOCK_MODE) {
+        const data = await mockMarketplace.getListings();
+        setListings(data as any);
+      } else {
+        await refetch();
+      }
     } catch (error) {
       console.error("Purchase failed:", error);
       alert("Purchase failed. Please try again.");
@@ -148,7 +149,12 @@ export default function HomeClient() {
         await sui.cancelListing(l.listing_id, l.itemType);
       }
       alert("Listing cancelled successfully!");
-      fetchListings();
+      if (MOCK_MODE) {
+        const data = await mockMarketplace.getListings();
+        setListings(data as any);
+      } else {
+        await refetch();
+      }
     } catch (error) {
       console.error("Cancellation failed:", error);
       alert("Cancellation failed. Please try again.");
@@ -251,7 +257,7 @@ export default function HomeClient() {
 
       {/* Listings Grid */}
       <div className="max-w-7xl mx-auto px-6 pb-12">
-        {loading ? (
+        {(((MOCK_MODE && isLoading && listings.length === 0) || (!MOCK_MODE && isLoading))) ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[...Array(8)].map((_, i) => (
               <Card key={i} className="animate-pulse">
