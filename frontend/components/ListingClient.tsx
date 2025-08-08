@@ -8,10 +8,12 @@ import { mockMarketplace, MockListing } from '../lib/mockData';
 import { useWallet } from '../lib/useWallet';
 import { MOCK_MODE } from '../lib/config';
 import { useSuiClient } from '../lib/suiClient';
+import { useToast } from './ToastProvider';
 
 export default function ListingClient() {
   const { currentAccount } = useWallet();
   const sui = useSuiClient();
+  const { showToast } = useToast();
 
   const [listingId, setListingId] = useState<string>('');
   const [listing, setListing] = useState<MockListing | null>(null);
@@ -69,10 +71,10 @@ export default function ListingClient() {
         await sui.buyItem(listing.listing_id, listing.itemType, listing.price);
       }
       await refresh();
-      alert('Purchase successful.');
+      showToast('success', 'Purchase successful.');
     } catch (e) {
       console.error(e);
-      alert('Purchase failed.');
+      showToast('error', 'Purchase failed.');
     } finally {
       setActionLoading(false);
     }
@@ -88,10 +90,10 @@ export default function ListingClient() {
         await sui.cancelListing(listing.listing_id, listing.itemType);
       }
       await refresh();
-      alert('Listing cancelled.');
+      showToast('success', 'Listing cancelled.');
     } catch (e) {
       console.error(e);
-      alert('Cancellation failed.');
+      showToast('error', 'Cancellation failed.');
     } finally {
       setActionLoading(false);
     }
@@ -101,7 +103,7 @@ export default function ListingClient() {
     if (!currentAccount || !listing) return;
     const value = parseFloat(bidAmount);
     if (!isFinite(value) || value <= 0) {
-      alert('Enter a valid bid amount');
+      showToast('info', 'Enter a valid bid amount');
       return;
     }
     setActionLoading(true);
@@ -113,10 +115,10 @@ export default function ListingClient() {
       }
       await refresh();
       setBidAmount('');
-      alert('Bid placed.');
+      showToast('success', 'Bid placed.');
     } catch (e) {
       console.error(e);
-      alert('Bid failed.');
+      showToast('error', 'Bid failed.');
     } finally {
       setActionLoading(false);
     }
@@ -132,10 +134,10 @@ export default function ListingClient() {
         await sui.endAuction(listing.listing_id, listing.itemType);
       }
       await refresh();
-      alert('Auction ended.');
+      showToast('success', 'Auction ended.');
     } catch (e) {
       console.error(e);
-      alert('End auction failed.');
+      showToast('error', 'End auction failed.');
     } finally {
       setActionLoading(false);
     }

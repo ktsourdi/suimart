@@ -11,6 +11,7 @@ import Link from 'next/link';
 import { mockMarketplace } from '../lib/mockData';
 import { MOCK_MODE } from '../lib/config';
 import { useSuiClient } from '../lib/suiClient';
+import { useToast } from './ToastProvider';
 
 interface ValidationErrors {
   title?: string;
@@ -23,6 +24,7 @@ interface ValidationErrors {
 
 export default function SellClient() {
   const sui = useSuiClient();
+  const { showToast } = useToast();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -130,6 +132,7 @@ export default function SellClient() {
       }
 
       setSuccessMessage("Item listed successfully! Redirecting to marketplace...");
+      showToast('success', 'Item listed successfully!');
       
       // Reset form
       setTitle('');
@@ -148,6 +151,7 @@ export default function SellClient() {
     } catch (error) {
       console.error('Failed to create listing:', error);
       setErrorMessage("Failed to create listing. Please try again.");
+      showToast('error', 'Failed to create listing.');
     } finally {
       setLoading(false);
     }

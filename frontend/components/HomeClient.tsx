@@ -10,6 +10,7 @@ import { mockMarketplace, MockListing } from "../lib/mockData";
 import { MOCK_MODE } from "../lib/config";
 import { ConnectButton } from '@mysten/dapp-kit';
 import { useListings, useSuiClient } from '../lib/suiClient';
+import { useToast } from './ToastProvider';
 
 interface ListingData {
   listing_id: string;
@@ -39,6 +40,7 @@ export default function HomeClient() {
   const sui = useSuiClient();
   const { data: listingsData, isLoading, refetch } = useListings();
   const [listings, setListings] = useState<ListingData[]>([]);
+  const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
@@ -109,7 +111,7 @@ export default function HomeClient() {
 
   const handleBuy = async (listingId: string) => {
     if (!currentAccount) {
-      alert("Please connect your wallet first.");
+      showToast('info', 'Please connect your wallet first.');
       return;
     }
 
@@ -121,7 +123,7 @@ export default function HomeClient() {
         if (!l) throw new Error('Listing not found');
         await sui.buyItem(l.listing_id, l.itemType, l.price);
       }
-      alert("Purchase successful! The item has been transferred to your wallet.");
+      showToast('success', 'Purchase successful!');
       if (MOCK_MODE) {
         const data = await mockMarketplace.getListings();
         setListings(data as any);
@@ -130,13 +132,13 @@ export default function HomeClient() {
       }
     } catch (error) {
       console.error("Purchase failed:", error);
-      alert("Purchase failed. Please try again.");
+      showToast('error', 'Purchase failed. Please try again.');
     }
   };
 
   const handleCancel = async (listingId: string) => {
     if (!currentAccount) {
-      alert("Please connect your wallet first.");
+      showToast('info', 'Please connect your wallet first.');
       return;
     }
 
@@ -148,7 +150,7 @@ export default function HomeClient() {
         if (!l) throw new Error('Listing not found');
         await sui.cancelListing(l.listing_id, l.itemType);
       }
-      alert("Listing cancelled successfully!");
+      showToast('success', 'Listing cancelled successfully!');
       if (MOCK_MODE) {
         const data = await mockMarketplace.getListings();
         setListings(data as any);
@@ -157,7 +159,7 @@ export default function HomeClient() {
       }
     } catch (error) {
       console.error("Cancellation failed:", error);
-      alert("Cancellation failed. Please try again.");
+      showToast('error', 'Cancellation failed. Please try again.');
     }
   };
 
