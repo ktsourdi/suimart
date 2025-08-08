@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Button from './ui/Button';
 import Input from './ui/Input';
 import Link from 'next/link';
+import { useListings } from '../lib/suiClient';
 
 interface UserProfile {
   username: string;
@@ -22,6 +23,7 @@ interface UserProfile {
 
 export default function ProfileClient() {
   const currentAccount = useCurrentAccount();
+  const { data: listingsData, isLoading: listingsLoading } = useListings();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -294,6 +296,37 @@ export default function ProfileClient() {
                     <p className="text-sm">{new Date(profile.joinDate).toLocaleDateString()}</p>
                   </div>
                 </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>My Listings</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {listingsLoading ? (
+                <p className="text-sm text-muted-foreground">Loading listings...</p>
+              ) : (
+                <div className="space-y-3">
+                  {(listingsData || [])
+                    .filter((l: any) => l.seller?.toLowerCase() === currentAccount.address.toLowerCase())
+                    .map((l: any) => (
+                      <div key={l.listing_id} className="flex items-center justify-between border rounded-lg p-3">
+                        <div>
+                          <div className="font-medium">{l.title || 'Untitled Item'}</div>
+                          <div className="text-xs text-muted-foreground">{l.listing_id}</div>
+                        </div>
+                        <div className="text-sm font-semibold">{(l.price || 0).toFixed(2)} SUI</div>
+                        <Link href={`/listing?id=${l.listing_id}`}>
+                          <Button size="sm" variant="outline">View</Button>
+                        </Link>
+                      </div>
+                    ))}
+                  {((listingsData || []).filter((l: any) => l.seller?.toLowerCase() === currentAccount.address.toLowerCase()).length === 0) && (
+                    <p className="text-sm text-muted-foreground">No active listings yet.</p>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
