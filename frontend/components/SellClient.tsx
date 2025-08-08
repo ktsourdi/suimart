@@ -10,6 +10,7 @@ import Textarea from './ui/Textarea';
 import Link from 'next/link';
 import { mockMarketplace } from '../lib/mockData';
 import { MOCK_MODE } from '../lib/config';
+import { useSuiClient } from '../lib/suiClient';
 
 interface ValidationErrors {
   title?: string;
@@ -19,6 +20,7 @@ interface ValidationErrors {
 }
 
 export default function SellClient() {
+  const sui = useSuiClient();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
@@ -91,18 +93,22 @@ export default function SellClient() {
     setSuccessMessage(null);
 
     try {
-      // Simulate transaction delay
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      await mockMarketplace.createListing({
-        title: title.trim(),
-        description: description.trim(),
-        price: parseFloat(price),
-        category,
-        seller: currentAccount.address,
-        itemType: 'sui::coin::Coin<0x2::sui::SUI>',
-        isAuction: false
-      });
+      if (MOCK_MODE) {
+        await mockMarketplace.createListing({
+          title: title.trim(),
+          description: description.trim(),
+          price: parseFloat(price),
+          category,
+          seller: currentAccount.address,
+          itemType: '0x2::devnet_nft::DevNFT',
+          isAuction: false
+        });
+      } else {
+        // TODO: Replace with real object selection and on-chain list_item call
+        alert('On-chain listing flow requires selecting an item object. Not implemented yet.');
+      }
 
       setSuccessMessage("Item listed successfully! Redirecting to marketplace...");
       

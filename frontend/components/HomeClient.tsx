@@ -9,6 +9,7 @@ import MarketStats from "./MarketStats";
 import { mockMarketplace, MockListing } from "../lib/mockData";
 import { MOCK_MODE } from "../lib/config";
 import { ConnectButton } from '@mysten/dapp-kit';
+import { useSuiClient } from '../lib/suiClient';
 
 interface ListingData {
   listing_id: string;
@@ -35,6 +36,7 @@ export default function HomeClient() {
     currentAccount,
     connect,
   } = useWallet();
+  const sui = useSuiClient();
 
   const [listings, setListings] = useState<ListingData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -64,16 +66,15 @@ export default function HomeClient() {
   const fetchListings = useCallback(async () => {
     setLoading(true);
     try {
-      // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 800));
-      const mockListings = await mockMarketplace.getListings();
-      setListings(mockListings);
+      const data = MOCK_MODE ? await mockMarketplace.getListings() : await sui.getListings();
+      setListings(data as any);
     } catch (error) {
       console.error("Failed to fetch listings:", error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [sui]);
 
   useEffect(() => {
     fetchListings();
@@ -117,9 +118,15 @@ export default function HomeClient() {
     }
 
     try {
-      await mockMarketplace.buyItem(listingId, currentAccount.address);
+      if (MOCK_MODE) {
+        await mockMarketplace.buyItem(listingId, currentAccount.address);
+      } else {
+        const l = listings.find(l => l.listing_id === listingId);
+        if (!l) throw new Error('Listing not found');
+        await sui.buyItem(l.listing_id, l.itemType, l.price);
+      }
       alert("Purchase successful! The item has been transferred to your wallet.");
-      fetchListings(); // Refresh listings
+      fetchListings();
     } catch (error) {
       console.error("Purchase failed:", error);
       alert("Purchase failed. Please try again.");
@@ -133,9 +140,16 @@ export default function HomeClient() {
     }
 
     try {
-      await mockMarketplace.cancelListing(listingId, currentAccount.address);
+      if (MOCK_MODE) {
+        await mockMarketplace.cancelListing(listingId, currentAccount.address);
+      } else {
+        const l = listings.find(l => l.listing_id === listingId);
+        if (!l) throw new Error('Listing not found');
+        // Assuming cancel is by ending auction or a future cancel function; not exposed in client yet
+        alert('Cancel on-chain not implemented yet.');
+      }
       alert("Listing cancelled successfully!");
-      fetchListings(); // Refresh listings
+      fetchListings();
     } catch (error) {
       console.error("Cancellation failed:", error);
       alert("Cancellation failed. Please try again.");
@@ -303,7 +317,7 @@ export default function HomeClient() {
                       <span>❤️ {listing.favorites || 0}</span>
                     </div>
                   </div>
-                                     <div className="flex justify-between items-center text-xs text-[#636871] mb-4">
+                   <div className="flex justify-between items-center text-xs text-[#636871] mb-4">
                      <span>Seller: {formatAddress(listing.seller)}</span>
                      <span>{formatDate(listing.createdAt || Date.now())}</span>
                    </div>

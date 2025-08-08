@@ -7,9 +7,11 @@ import { Card, CardContent } from './ui/Card';
 import { mockMarketplace, MockListing } from '../lib/mockData';
 import { useWallet } from '../lib/useWallet';
 import { MOCK_MODE } from '../lib/config';
+import { useSuiClient } from '../lib/suiClient';
 
 export default function ListingClient() {
   const { currentAccount } = useWallet();
+  const sui = useSuiClient();
 
   const [listingId, setListingId] = useState<string>('');
   const [listing, setListing] = useState<MockListing | null>(null);
@@ -30,14 +32,14 @@ export default function ListingClient() {
     let mounted = true;
     const load = async () => {
       setLoading(true);
-      const items = await mockMarketplace.getListings();
+      const items = MOCK_MODE ? await mockMarketplace.getListings() : await sui.getListings();
       const found = items.find((l) => l.listing_id === listingId) || null;
       if (mounted) setListing(found);
       setLoading(false);
     };
     load();
     return () => { mounted = false; };
-  }, [listingId]);
+  }, [listingId, sui]);
 
   const isOwner = useMemo(() => {
     return !!currentAccount && listing?.seller === currentAccount.address;
@@ -53,7 +55,7 @@ export default function ListingClient() {
   }, [listing]);
 
   const refresh = async () => {
-    const items = await mockMarketplace.getListings();
+    const items = MOCK_MODE ? await mockMarketplace.getListings() : await sui.getListings();
     setListing(items.find((l) => l.listing_id === listingId) || null);
   };
 
@@ -61,7 +63,11 @@ export default function ListingClient() {
     if (!currentAccount || !listing) return;
     setActionLoading(true);
     try {
-      await mockMarketplace.buyItem(listing.listing_id, currentAccount.address);
+      if (MOCK_MODE) {
+        await mockMarketplace.buyItem(listing.listing_id, currentAccount.address);
+      } else {
+        await sui.buyItem(listing.listing_id, listing.itemType, listing.price);
+      }
       await refresh();
       alert('Purchase successful.');
     } catch (e) {
@@ -76,7 +82,11 @@ export default function ListingClient() {
     if (!currentAccount || !listing) return;
     setActionLoading(true);
     try {
-      await mockMarketplace.cancelListing(listing.listing_id, currentAccount.address);
+      if (MOCK_MODE) {
+        await mockMarketplace.cancelListing(listing.listing_id, currentAccount.address);
+      } else {
+        alert('Cancel on-chain not implemented yet.');
+      }
       await refresh();
       alert('Listing cancelled.');
     } catch (e) {
@@ -96,7 +106,11 @@ export default function ListingClient() {
     }
     setActionLoading(true);
     try {
-      await mockMarketplace.placeBid(listing.listing_id, value, currentAccount.address);
+      if (MOCK_MODE) {
+        await mockMarketplace.placeBid(listing.listing_id, value, currentAccount.address);
+      } else {
+        await sui.placeBid(listing.listing_id, listing.itemType, value);
+      }
       await refresh();
       setBidAmount('');
       alert('Bid placed.');
@@ -112,7 +126,11 @@ export default function ListingClient() {
     if (!listing) return;
     setActionLoading(true);
     try {
-      await mockMarketplace.endAuction(listing.listing_id);
+      if (MOCK_MODE) {
+        await mockMarketplace.endAuction(listing.listing_id);
+      } else {
+        await sui.endAuction(listing.listing_id, listing.itemType);
+      }
       await refresh();
       alert('Auction ended.');
     } catch (e) {
