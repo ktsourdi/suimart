@@ -31,10 +31,78 @@ export function useSuiClient() {
     client,
 
     async getListings(): Promise<any[]> {
-      // TODO: Implement by querying events / shared objects from PACKAGE_ID.
-      // Returning an empty array as a placeholder for real-mode;
-      // UI falls back to mock when MOCK_MODE=true.
-      return [];
+      // Fetch recent ListingCreated events, then read the listing objects that still exist
+      const resp = await client.queryEvents({
+        query: { MoveEventType: `${PACKAGE_ID}::marketplace::ListingCreated` },
+        order: 'descending',
+        limit: 100,
+      });
+
+      const events = resp.data || [];
+      const ids = events
+        .map((e: any) => {
+          const j = (e.parsedJson || {}) as any;
+          return j.listing_id || j.listingId || j.listingID;
+        })
+        .filter(Boolean) as string[];
+
+      const uniqueIds = Array.from(new Set(ids));
+
+      const objects = await Promise.all(
+        uniqueIds.map(async (id) => {
+          try {
+            const obj = await client.getObject({ id, options: { showContent: true } });
+            return { id, obj };
+          } catch (e) {
+            return { id, obj: null };
+          }
+        })
+      );
+
+      const listings = objects
+        .filter(({ obj }) => obj && (obj as any).data && (obj as any).data.content)
+        .map(({ id, obj }) => {
+          const data = (obj as any).data;
+          const content = data.content as any;
+          const typeStr: string = content.type;
+          const fields = content.fields as any;
+          const typeArg = typeStr.includes('<') ? typeStr.slice(typeStr.indexOf('<') + 1, typeStr.lastIndexOf('>')) : '';
+
+          // Try to source from the corresponding event for createdAt/title/category/price
+          const evt = events.find((e: any) => {
+            const j = (e.parsedJson || {}) as any;
+            const eid = j.listing_id || j.listingId || j.listingID;
+            return eid === id;
+          }) as any;
+          const evJson = (evt?.parsedJson || {}) as any;
+          const tsMs = evt?.timestampMs ? Number(evt.timestampMs) : Date.now();
+
+          const priceRaw: number = Number(evJson.price ?? fields.price ?? 0);
+          const priceSui = priceRaw / 1_000_000_000;
+          const isAuction: boolean = Boolean(evJson.is_auction ?? fields.is_auction ?? false);
+
+          return {
+            listing_id: id,
+            price: priceSui,
+            seller: (evJson.seller ?? fields.seller ?? '').toString(),
+            itemType: typeArg,
+            title: (evJson.title ?? fields.title ?? '').toString(),
+            description: (fields.description ?? '').toString(),
+            category: (evJson.category ?? fields.category ?? '').toString(),
+            createdAt: tsMs,
+            updatedAt: tsMs,
+            views: Number(fields.views ?? 0),
+            favorites: Number(fields.favorites ?? 0),
+            isAuction,
+            auctionEndTime: undefined,
+            currentBid: undefined,
+            highestBidder: undefined,
+            imageUrl: undefined,
+            status: 'active' as const,
+          };
+        });
+
+      return listings;
     },
 
     async createListing(input: CreateListingInput) {
@@ -102,6 +170,17 @@ export function useSuiClient() {
       const listing = tx.object(listingObjectId);
       tx.moveCall({
         target: moduleTarget('end_auction'),
+        typeArguments: [itemType],
+        arguments: [listing],
+      });
+      return signer.mutateAsync({ transaction: tx });
+    },
+
+    async cancelListing(listingObjectId: string, itemType: string) {
+      const tx = new Transaction();
+      const listing = tx.object(listingObjectId);
+      tx.moveCall({
+        target: moduleTarget('cancel_listing'),
         typeArguments: [itemType],
         arguments: [listing],
       });

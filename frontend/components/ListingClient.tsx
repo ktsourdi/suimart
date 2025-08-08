@@ -85,7 +85,7 @@ export default function ListingClient() {
       if (MOCK_MODE) {
         await mockMarketplace.cancelListing(listing.listing_id, currentAccount.address);
       } else {
-        alert('Cancel on-chain not implemented yet.');
+        await sui.cancelListing(listing.listing_id, listing.itemType);
       }
       await refresh();
       alert('Listing cancelled.');

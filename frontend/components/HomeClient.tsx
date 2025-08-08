@@ -145,8 +145,7 @@ export default function HomeClient() {
       } else {
         const l = listings.find(l => l.listing_id === listingId);
         if (!l) throw new Error('Listing not found');
-        // Assuming cancel is by ending auction or a future cancel function; not exposed in client yet
-        alert('Cancel on-chain not implemented yet.');
+        await sui.cancelListing(l.listing_id, l.itemType);
       }
       alert("Listing cancelled successfully!");
       fetchListings();
