@@ -17,6 +17,8 @@ interface ValidationErrors {
   description?: string;
   price?: string;
   category?: string;
+  itemObjectId?: string;
+  itemType?: string;
 }
 
 export default function SellClient() {
@@ -25,6 +27,8 @@ export default function SellClient() {
   const [description, setDescription] = useState('');
   const [price, setPrice] = useState('');
   const [category, setCategory] = useState('');
+  const [itemObjectId, setItemObjectId] = useState('');
+  const [itemType, setItemType] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -72,6 +76,15 @@ export default function SellClient() {
       errors.category = 'Category is required';
     }
 
+    if (!MOCK_MODE) {
+      if (!itemObjectId.trim()) {
+        errors.itemObjectId = 'Object ID is required in real mode';
+      }
+      if (!itemType.trim()) {
+        errors.itemType = 'Item type is required in real mode';
+      }
+    }
+
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
   };
@@ -106,8 +119,14 @@ export default function SellClient() {
           isAuction: false
         });
       } else {
-        // TODO: Replace with real object selection and on-chain list_item call
-        alert('On-chain listing flow requires selecting an item object. Not implemented yet.');
+        await sui.createListing({
+          itemType: itemType.trim(),
+          itemObjectId: itemObjectId.trim(),
+          price: parseFloat(price),
+          title: title.trim(),
+          description: description.trim(),
+          category,
+        });
       }
 
       setSuccessMessage("Item listed successfully! Redirecting to marketplace...");
@@ -117,6 +136,8 @@ export default function SellClient() {
       setDescription('');
       setPrice('');
       setCategory('');
+      setItemObjectId('');
+      setItemType('');
       setValidationErrors({});
 
       // Redirect after a short delay
@@ -249,6 +270,43 @@ export default function SellClient() {
                   <p className="mt-1 text-sm text-[#ff794b]">{validationErrors.category}</p>
                 )}
               </div>
+
+              {!MOCK_MODE && (
+                <>
+                  {/* Object ID */}
+                  <Input
+                    label="Item Object ID"
+                    placeholder="0x..."
+                    value={itemObjectId}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      setItemObjectId(e.target.value);
+                      if (validationErrors.itemObjectId) {
+                        setValidationErrors({ ...validationErrors, itemObjectId: undefined });
+                      }
+                    }}
+                    error={validationErrors.itemObjectId}
+                    disabled={loading}
+                    required
+                  />
+
+                  {/* Type */}
+                  <Input
+                    label="Item Type"
+                    placeholder="0x...::module::Type"
+                    value={itemType}
+                    onChange={(e: ChangeEvent<HTMLInputElement>) => {
+                      setItemType(e.target.value);
+                      if (validationErrors.itemType) {
+                        setValidationErrors({ ...validationErrors, itemType: undefined });
+                      }
+                    }}
+                    error={validationErrors.itemType}
+                    disabled={loading}
+                    required
+                    helperText="Fully-qualified Move type of the listed object"
+                  />
+                </>
+              )}
 
               {/* Error/Success Messages */}
               {errorMessage && (

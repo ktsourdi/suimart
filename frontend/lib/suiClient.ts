@@ -59,6 +59,18 @@ export function useSuiClient() {
         })
       );
 
+      const readOption = <T,>(opt: any): T | undefined => {
+        if (!opt) return undefined;
+        // Common Sui Option JSON shape
+        if (typeof opt === 'object' && 'fields' in opt) {
+          const f = (opt as any).fields;
+          if (f && 'some' in f) return f.some as T;
+          if (f && 'none' in f) return undefined;
+        }
+        // Sometimes plain value or null
+        return opt as T;
+      };
+
       const listings = objects
         .filter(({ obj }) => obj && (obj as any).data && (obj as any).data.content)
         .map(({ id, obj }) => {
@@ -81,6 +93,10 @@ export function useSuiClient() {
           const priceSui = priceRaw / 1_000_000_000;
           const isAuction: boolean = Boolean(evJson.is_auction ?? fields.is_auction ?? false);
 
+          const auctionEndSeconds = readOption<number>(fields.auction_end_time);
+          const currentBidRaw = readOption<number>(fields.current_bid);
+          const highestBidderAddr = readOption<string>(fields.highest_bidder);
+
           return {
             listing_id: id,
             price: priceSui,
@@ -94,9 +110,9 @@ export function useSuiClient() {
             views: Number(fields.views ?? 0),
             favorites: Number(fields.favorites ?? 0),
             isAuction,
-            auctionEndTime: undefined,
-            currentBid: undefined,
-            highestBidder: undefined,
+            auctionEndTime: auctionEndSeconds ? auctionEndSeconds * 1000 : undefined,
+            currentBid: currentBidRaw ? currentBidRaw / 1_000_000_000 : undefined,
+            highestBidder: highestBidderAddr,
             imageUrl: undefined,
             status: 'active' as const,
           };
