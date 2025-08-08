@@ -24,7 +24,7 @@ export interface CreateAuctionInput extends CreateListingInput {
 export function useSuiClient() {
   const client = new SuiClient({ url: getFullnodeUrl(SUI_NETWORK) });
   const signer = useSignAndExecuteTransaction();
-  const currentAccount = useCurrentAccount();
+  useCurrentAccount();
 
   const moduleTarget = (fn: string) => `${PACKAGE_ID}::marketplace::${fn}`;
 

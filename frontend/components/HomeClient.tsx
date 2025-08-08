@@ -1,17 +1,18 @@
 'use client';
 import { useWallet } from "../lib/useWallet";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/Card";
+import { Card, CardContent } from "./ui/Card";
 import Button from "./ui/Button";
 import Input from "./ui/Input";
 import MarketStats from "./MarketStats";
-import { mockMarketplace, MockListing } from "../lib/mockData";
+import { mockMarketplace } from "../lib/mockData";
 import { MOCK_MODE } from "../lib/config";
 import { ConnectButton } from '@mysten/dapp-kit';
 import { useListings, useSuiClient } from '../lib/suiClient';
 import { useToast } from './ToastProvider';
 import NetworkBanner from './NetworkBanner';
+import Image from 'next/image';
 
 interface ListingData {
   listing_id: string;
@@ -34,10 +35,7 @@ interface ListingData {
 }
 
 export default function HomeClient() {
-  const {
-    currentAccount,
-    connect,
-  } = useWallet();
+  const { currentAccount } = useWallet();
   const sui = useSuiClient();
   const { data: listingsData, isLoading, refetch } = useListings();
   const [listings, setListings] = useState<ListingData[]>([]);
@@ -66,21 +64,19 @@ export default function HomeClient() {
   ];
 
   useEffect(() => {
-    let active = true;
     const run = async () => {
       if (MOCK_MODE) {
         const data = await mockMarketplace.getListings();
-        if (active) setListings(data as any);
+        setListings(data as any);
       } else if (listingsData) {
         setListings(listingsData as any);
       }
     };
     run();
-    return () => { active = false; };
   }, [listingsData]);
 
   const filteredAndSortedListings = useMemo(() => {
-    let filtered = listings.filter((listing) => {
+    const filtered = listings.filter((listing) => {
       const matchesSearch = listing.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           listing.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           listing.category?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -290,10 +286,12 @@ export default function HomeClient() {
                 <div className="relative">
                   <div className="h-48 bg-gradient-to-br from-[#6fbcf0] to-[#0284ad] flex items-center justify-center">
                     {listing.imageUrl ? (
-                      <img
+                      <Image
                         src={listing.imageUrl}
-                        alt={listing.title}
-                        className="w-full h-full object-cover"
+                        alt={listing.title || 'Listing image'}
+                        width={800}
+                        height={192}
+                        className="w-full h-48 object-cover"
                       />
                     ) : (
                       <div className="text-white text-4xl">🎨</div>

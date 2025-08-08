@@ -4,14 +4,16 @@ import { useCurrentAccount, useSignAndExecuteTransaction, useSignTransaction, us
 import { Transaction } from '@mysten/sui/transactions';
 
 export function useWallet() {
-  if (MOCK_MODE) {
-    return useMockWalletKit();
-  }
-
+  // Call hooks unconditionally at the top level
+  const mockKit = useMockWalletKit();
   const currentAccount = useCurrentAccount();
   const signAndExecuteTransaction = useSignAndExecuteTransaction();
   const signTransaction = useSignTransaction();
   const signMessage = useSignPersonalMessage();
+
+  if (MOCK_MODE) {
+    return mockKit;
+  }
 
   return {
     currentAccount,

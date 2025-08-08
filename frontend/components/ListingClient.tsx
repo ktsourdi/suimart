@@ -9,6 +9,7 @@ import { useWallet } from '../lib/useWallet';
 import { MOCK_MODE } from '../lib/config';
 import { useSuiClient } from '../lib/suiClient';
 import { useToast } from './ToastProvider';
+import Image from 'next/image';
 
 export default function ListingClient() {
   const { currentAccount } = useWallet();
@@ -178,9 +179,9 @@ export default function ListingClient() {
       )}
 
       <Card>
-        <div className="h-64 bg-gradient-to-br from-[#6fbcf0] to-[#0284ad] flex items-center justify-center">
+        <div className="h-64 bg-gradient-to-br from-[#6fbcf0] to-[#0284ad] flex items-center justify-center overflow-hidden">
           {listing.imageUrl ? (
-            <img src={listing.imageUrl} alt={listing.title} className="w-full h-64 object-cover" />
+            <Image src={listing.imageUrl} alt={listing.title} width={1024} height={256} className="w-full h-64 object-cover" />
           ) : (
             <div className="text-white text-5xl">🎨</div>
           )}

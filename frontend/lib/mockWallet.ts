@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { MOCK_WALLET_ADDRESS, MOCK_WALLET_NAME } from './config';
 
 export interface MockAccount {
@@ -27,7 +27,7 @@ export function useMockWalletKit(): MockWalletKit {
   const [currentAccount, setCurrentAccount] = useState<MockAccount | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const mockAccount: MockAccount = {
+  const mockAccount: MockAccount = useMemo(() => ({
     address: MOCK_WALLET_ADDRESS,
     publicKey: 'mock-public-key',
     chains: ['sui:mainnet'],
@@ -35,32 +35,28 @@ export function useMockWalletKit(): MockWalletKit {
     version: '1.0.0',
     label: MOCK_WALLET_NAME,
     icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iMTIiIGZpbGw9IiM2NjY2NjYiLz4KPHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iMTIiIHZpZXdCb3g9IjAgMCAxMiAxMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTYgMkM4LjIwOTEgMiAxMCA0IDYgNkM0IDYgMiA0IDIgMkM2IDIgNiAyIDYgMloiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo8L3N2Zz4K'
-  };
+  }), []);
 
   const connect = useCallback(async () => {
     setIsLoading(true);
-    // Simulate connection delay
     await new Promise(resolve => setTimeout(resolve, 1000));
     setCurrentAccount(mockAccount);
     setIsLoading(false);
-  }, []);
+  }, [mockAccount]);
 
   const disconnect = useCallback(async () => {
     setIsLoading(true);
-    // Simulate disconnection delay
     await new Promise(resolve => setTimeout(resolve, 500));
     setCurrentAccount(null);
     setIsLoading(false);
   }, []);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const signAndExecuteTransactionBlock = useCallback(async (options: any) => {
     if (!currentAccount) {
       throw new Error('Wallet not connected');
     }
-    
-    // Simulate transaction execution
     await new Promise(resolve => setTimeout(resolve, 2000));
-    
     return {
       digest: 'mock-transaction-digest',
       effects: {
@@ -73,28 +69,24 @@ export function useMockWalletKit(): MockWalletKit {
     };
   }, [currentAccount]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const signTransactionBlock = useCallback(async (options: any) => {
     if (!currentAccount) {
       throw new Error('Wallet not connected');
     }
-    
-    // Simulate transaction signing
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
     return {
       signature: 'mock-signature',
       transactionBlockBytes: 'mock-transaction-bytes'
     };
   }, [currentAccount]);
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const signMessage = useCallback(async (options: any) => {
     if (!currentAccount) {
       throw new Error('Wallet not connected');
     }
-    
-    // Simulate message signing
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
     return {
       signature: 'mock-message-signature',
       signatureScheme: 'ED25519'

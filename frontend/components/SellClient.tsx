@@ -36,7 +36,7 @@ export default function SellClient() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
-  const { signAndExecuteTransactionBlock, currentAccount } = useWallet();
+  const { currentAccount } = useWallet();
   const router = useRouter();
 
   const categories = [
