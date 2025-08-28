@@ -1,10 +1,9 @@
 [package]
-name = "Suimart"
+name = "suimart"
 version = "0.0.1"
-authors = ["Suimart Contributors"]
+
+[dependencies]
+Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "main" }
 
 [addresses]
 suimart = "0x0"
-
-[dependencies]
-Sui = { git = "https://github.com/MystenLabs/sui", subdir = "crates/sui-framework", rev = "main" }
