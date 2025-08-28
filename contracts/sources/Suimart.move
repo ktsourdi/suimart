@@ -4,6 +4,7 @@ module suimart::marketplace {
     use sui::balance::{Self, Balance};
     use sui::tx_context::{Self, TxContext};
     use sui::event;
+    use sui::clock::{Self, Clock};
     use sui::sui::SUI;
     use sui::coin::{Self, Coin};
     use sui::table::{Self, Table};
@@ -54,6 +55,7 @@ module suimart::marketplace {
         min_bid: Option<u64>,
         current_bid: Option<u64>,
         highest_bidder: Option<address>,
+        escrow: Option<Balance<SUI>>,
     }
 
     /// User profile with reputation
@@ -80,6 +82,8 @@ module suimart::marketplace {
         created_at: u64,
         expires_at: u64,
         status: u8, // 0: pending, 1: accepted, 2: rejected, 3: expired
+        seller: address,
+        escrow: Balance<SUI>,
     }
 
     /// Marketplace statistics
@@ -185,6 +189,7 @@ module suimart::marketplace {
         title: String,
         description: String,
         category: String,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
         // Validate inputs
@@ -193,7 +198,7 @@ module suimart::marketplace {
         assert!(string::length(&description) <= MAX_DESCRIPTION_LENGTH, EInvalidDescription);
         assert!(string::length(&category) <= MAX_CATEGORY_LENGTH, EInvalidCategory);
 
-        let current_time = tx_context::epoch(ctx);
+        let current_time = clock::timestamp_ms(clock);
         
         let listing = Listing {
             id: object::new(ctx),
@@ -212,6 +217,7 @@ module suimart::marketplace {
             min_bid: option::none(),
             current_bid: option::none(),
             highest_bidder: option::none(),
+            escrow: option::none(),
         };
 
         let listing_id = object::id(&listing);
@@ -237,6 +243,7 @@ module suimart::marketplace {
         title: String,
         description: String,
         category: String,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
         // Validate inputs
@@ -247,8 +254,8 @@ module suimart::marketplace {
         assert!(string::length(&description) <= MAX_DESCRIPTION_LENGTH, EInvalidDescription);
         assert!(string::length(&category) <= MAX_CATEGORY_LENGTH, EInvalidCategory);
 
-        let current_time = tx_context::epoch(ctx);
-        let end_time = current_time + (duration_ms / 1000); // Convert to seconds
+        let current_time = clock::timestamp_ms(clock);
+        let end_time = current_time + duration_ms;
         
         let listing = Listing {
             id: object::new(ctx),
@@ -267,6 +274,7 @@ module suimart::marketplace {
             min_bid: option::some(min_bid),
             current_bid: option::some(starting_price),
             highest_bidder: option::none(),
+            escrow: option::none(),
         };
 
         let listing_id = object::id(&listing);
@@ -287,28 +295,35 @@ module suimart::marketplace {
     public entry fun place_bid<T: key + store>(
         listing: &mut Listing<T>,
         payment: Coin<SUI>,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
         assert!(listing.is_auction, EAuctionNotEnded);
         
-        let current_time = tx_context::epoch(ctx);
-        let end_time = option::borrow(&listing.auction_end_time);
-        assert!(current_time < *end_time, EAuctionEnded);
+        let current_time = clock::timestamp_ms(clock);
+        let end_time_ref = option::borrow(&listing.auction_end_time);
+        assert!(current_time < *end_time_ref, EAuctionEnded);
 
         let bid_amount = coin::value(&payment);
-        let min_bid = option::borrow(&listing.min_bid);
-        let current_bid = option::borrow(&listing.current_bid);
+        let min_bid_ref = option::borrow(&listing.min_bid);
+        let current_bid_ref = option::borrow(&listing.current_bid);
         
-        assert!(bid_amount >= *min_bid, EInsufficientPayment);
-        assert!(bid_amount > *current_bid, EInsufficientPayment);
+        assert!(bid_amount >= *min_bid_ref, EInsufficientPayment);
+        assert!(bid_amount > *current_bid_ref, EInsufficientPayment);
 
-        // Return previous bid if exists
+        // Refund previous highest bidder from escrow if it exists
         if (option::is_some(&listing.highest_bidder)) {
-            let previous_bidder = option::borrow(&listing.highest_bidder);
-            let previous_bid = option::borrow(&listing.current_bid);
-            let refund_coin = coin::split(&mut coin::from_balance(coin::into_balance(payment), ctx), *previous_bid, ctx);
-            transfer::public_transfer(refund_coin, *previous_bidder);
+            let prev_bidder_opt = option::take(&mut listing.highest_bidder);
+            let prev_bidder = option::destroy_some(prev_bidder_opt);
+            let prev_escrow_opt = option::take(&mut listing.escrow);
+            let prev_escrow = option::destroy_some(prev_escrow_opt);
+            let refund_coin = coin::from_balance(prev_escrow, ctx);
+            transfer::public_transfer(refund_coin, prev_bidder);
         };
+
+        // Move new bid into escrow
+        let new_escrow = coin::into_balance(payment);
+        listing.escrow = option::some(new_escrow);
 
         // Update auction state
         listing.current_bid = option::some(bid_amount);
@@ -320,35 +335,56 @@ module suimart::marketplace {
             bidder: tx_context::sender(ctx),
             amount: bid_amount,
         });
-
-        // Transfer payment to seller
-        transfer::public_transfer(payment, listing.seller);
     }
 
     /// End an auction and transfer item to winner
     public entry fun end_auction<T: key + store>(
         listing: Listing<T>,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
         assert!(listing.is_auction, EAuctionNotEnded);
         
-        let current_time = tx_context::epoch(ctx);
-        let end_time = option::borrow(&listing.auction_end_time);
+        let current_time = clock::timestamp_ms(clock);
+        let Listing { id, item, seller, price: _, title: _, description: _, category: _, created_at: _, updated_at: _, views: _, favorites: _, is_auction: _, auction_end_time, min_bid: _, current_bid: mut current_bid, highest_bidder: mut highest_bidder, escrow: mut escrow } = listing;
+        let end_time = option::borrow(&auction_end_time);
         assert!(current_time >= *end_time, EAuctionNotEnded);
 
-        let winner = option::borrow(&listing.highest_bidder);
-        let final_price = option::borrow(&listing.current_bid);
+        if (option::is_some(&highest_bidder)) {
+            let winner_opt = option::take(&mut highest_bidder);
+            let winner = option::destroy_some(winner_opt);
+            let final_price_opt = option::take(&mut current_bid);
+            let final_price = option::destroy_some(final_price_opt);
 
-        event::emit(AuctionEnded {
-            listing_id: object::id(&listing),
-            winner: *winner,
-            final_price: *final_price,
-        });
+            event::emit(AuctionEnded {
+                listing_id: object::uid_to_inner(&id),
+                winner,
+                final_price,
+            });
 
-        // Transfer item to winner
-        let Listing { id, item, seller: _, price: _, title: _, description: _, category: _, created_at: _, updated_at: _, views: _, favorites: _, is_auction: _, auction_end_time: _, min_bid: _, current_bid: _, highest_bidder: _ } = listing;
-        transfer::public_transfer(item, *winner);
-        object::delete(id);
+            // Transfer item to winner and pay seller from escrow
+            transfer::public_transfer(item, winner);
+            let escrow_bal_opt = option::take(&mut escrow);
+            let escrow_bal = option::destroy_some(escrow_bal_opt);
+            let pay_coin = coin::from_balance(escrow_bal, ctx);
+            transfer::public_transfer(pay_coin, seller);
+            object::delete(id);
+        } else {
+            // No bids: return item (and any unexpected escrow) to seller
+            event::emit(AuctionEnded {
+                listing_id: object::uid_to_inner(&id),
+                winner: seller,
+                final_price: 0,
+            });
+            transfer::public_transfer(item, seller);
+            if (option::is_some(&escrow)) {
+                let escrow_bal_opt = option::take(&mut escrow);
+                let escrow_bal = option::destroy_some(escrow_bal_opt);
+                let refund_coin = coin::from_balance(escrow_bal, ctx);
+                transfer::public_transfer(refund_coin, seller);
+            };
+            object::delete(id);
+        }
     }
 
     /// Buy a listed item providing the exact `price` as `payment`
@@ -360,7 +396,7 @@ module suimart::marketplace {
         assert!(!listing.is_auction, EAuctionNotEnded);
         assert!(coin::value(&payment) == listing.price, EInsufficientPayment);
         
-        let Listing { id, item, seller, price, title: _, description: _, category: _, created_at: _, updated_at: _, views: _, favorites: _, is_auction: _, auction_end_time: _, min_bid: _, current_bid: _, highest_bidder: _ } = listing;
+        let Listing { id, item, seller, price, title: _, description: _, category: _, created_at: _, updated_at: _, views: _, favorites: _, is_auction: _, auction_end_time: _, min_bid: _, current_bid: _, highest_bidder: _, escrow: _ } = listing;
         
         transfer::public_transfer(payment, seller);
         event::emit(ListingPurchased {
@@ -379,12 +415,16 @@ module suimart::marketplace {
         ctx: &mut TxContext
     ) {
         assert!(tx_context::sender(ctx) == listing.seller, ENotSeller);
+        // Prevent cancelling auctions with active highest bidder
+        if (listing.is_auction) {
+            assert!(option::is_none(&listing.highest_bidder), EAuctionNotEnded);
+        };
         
         event::emit(ListingCancelled { 
             listing_id: object::id(&listing) 
         });
         
-        let Listing { id, item, seller, price: _, title: _, description: _, category: _, created_at: _, updated_at: _, views: _, favorites: _, is_auction: _, auction_end_time: _, min_bid: _, current_bid: _, highest_bidder: _ } = listing;
+        let Listing { id, item, seller, price: _, title: _, description: _, category: _, created_at: _, updated_at: _, views: _, favorites: _, is_auction: _, auction_end_time: _, min_bid: _, current_bid: _, highest_bidder: _, escrow: _ } = listing;
         transfer::public_transfer(item, seller);
         object::delete(id);
     }
@@ -395,6 +435,7 @@ module suimart::marketplace {
         new_price: u64,
         new_title: String,
         new_description: String,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
         assert!(tx_context::sender(ctx) == listing.seller, ENotSeller);
@@ -406,7 +447,7 @@ module suimart::marketplace {
         listing.price = new_price;
         listing.title = new_title;
         listing.description = new_description;
-        listing.updated_at = tx_context::epoch(ctx);
+        listing.updated_at = clock::timestamp_ms(clock);
 
         event::emit(ListingUpdated {
             listing_id: object::id(listing),
@@ -423,12 +464,16 @@ module suimart::marketplace {
         listing_id: ID,
         amount: u64,
         message: String,
+        seller: address,
+        payment: Coin<SUI>,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
         assert!(amount >= MIN_PRICE && amount <= MAX_PRICE, EInvalidPrice);
+        assert!(coin::value(&payment) == amount, EInsufficientPayment);
         
-        let current_time = tx_context::epoch(ctx);
-        let expiry_time = current_time + (OFFER_EXPIRY_DAYS * 24 * 3600); // Convert days to seconds
+        let current_time = clock::timestamp_ms(clock);
+        let expiry_time = current_time + (OFFER_EXPIRY_DAYS * 24 * 3600 * 1000);
         
         let offer = Offer {
             id: object::new(ctx),
@@ -439,6 +484,8 @@ module suimart::marketplace {
             created_at: current_time,
             expires_at: expiry_time,
             status: 0, // pending
+            seller,
+            escrow: coin::into_balance(payment),
         };
 
         event::emit(OfferCreated {
@@ -452,14 +499,16 @@ module suimart::marketplace {
     }
 
     /// Accept an offer
-    public entry fun accept_offer(
+    public entry fun accept_offer<T: key + store>(
         offer: Offer,
-        payment: Coin<SUI>,
+        listing: Listing<T>,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
-        let current_time = tx_context::epoch(ctx);
+        let current_time = clock::timestamp_ms(clock);
         assert!(current_time < offer.expires_at, EOfferExpired);
-        assert!(coin::value(&payment) == offer.amount, EInsufficientPayment);
+        assert!(tx_context::sender(ctx) == listing.seller, ENotSeller);
+        assert!(offer.listing_id == object::id(&listing), EInvalidPrice);
 
         event::emit(OfferAccepted {
             offer_id: object::id(&offer),
@@ -468,23 +517,29 @@ module suimart::marketplace {
             amount: offer.amount,
         });
 
-        // Transfer payment to seller
-        transfer::public_transfer(payment, tx_context::sender(ctx));
-        
-        // Delete the offer
-        let Offer { id, listing_id: _, buyer: _, amount: _, message: _, created_at: _, expires_at: _, status: _ } = offer;
-        object::delete(id);
+        // Transfer item to buyer and escrow to seller
+        let Offer { id: offer_id, listing_id: _, buyer, amount: _, message: _, created_at: _, expires_at: _, status: _, seller: _, escrow } = offer;
+        let pay_coin = coin::from_balance(escrow, ctx);
+        transfer::public_transfer(pay_coin, listing.seller);
+
+        let Listing { id: listing_id, item, seller: _, price: _, title: _, description: _, category: _, created_at: _, updated_at: _, views: _, favorites: _, is_auction: _, auction_end_time: _, min_bid: _, current_bid: _, highest_bidder: _, escrow: _ } = listing;
+        transfer::public_transfer(item, buyer);
+        object::delete(offer_id);
+        object::delete(listing_id);
     }
 
     /// Reject an offer
     public entry fun reject_offer(offer: Offer, ctx: &mut TxContext) {
+        assert!(tx_context::sender(ctx) == offer.seller, ENotSeller);
         event::emit(OfferRejected {
             offer_id: object::id(&offer),
             listing_id: offer.listing_id,
             buyer: offer.buyer,
         });
 
-        let Offer { id, listing_id: _, buyer: _, amount: _, message: _, created_at: _, expires_at: _, status: _ } = offer;
+        let Offer { id, listing_id: _, buyer, amount: _, message: _, created_at: _, expires_at: _, status: _, seller: _, escrow } = offer;
+        let refund_coin = coin::from_balance(escrow, ctx);
+        transfer::public_transfer(refund_coin, buyer);
         object::delete(id);
     }
 
@@ -495,6 +550,7 @@ module suimart::marketplace {
         username: String,
         bio: String,
         avatar_url: String,
+        clock: &Clock,
         ctx: &mut TxContext
     ) {
         let profile = UserProfile {
@@ -506,7 +562,7 @@ module suimart::marketplace {
             reputation_score: 0,
             total_sales: 0,
             total_purchases: 0,
-            join_date: tx_context::epoch(ctx),
+            join_date: clock::timestamp_ms(clock),
             verified: false,
         };
 
@@ -562,11 +618,11 @@ module suimart::marketplace {
     }
 
     /// Check if auction has ended
-    public fun is_auction_ended<T>(listing: &Listing<T>): bool {
+    public fun is_auction_ended<T>(listing: &Listing<T>, clock: &Clock): bool {
         if (!listing.is_auction) {
             return false
         };
-        let current_time = tx_context::epoch(tx_context::dummy_context());
+        let current_time = clock::timestamp_ms(clock);
         let end_time = option::borrow(&listing.auction_end_time);
         current_time >= *end_time
     }
