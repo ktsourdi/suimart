@@ -13,6 +13,7 @@ import { useListings, useSuiClient } from '../lib/suiClient';
 import { useToast } from './ToastProvider';
 import NetworkBanner from './NetworkBanner';
 import Image from 'next/image';
+import { LISTING_CATEGORIES, categoryKey, categoryName, listingImage } from '../lib/categories';
 
 interface ListingData {
   listing_id: string;
@@ -35,25 +36,17 @@ interface ListingData {
 }
 
 export default function HomeClient() {
-  const { currentAccount } = useWallet();
+  const { currentAccount, connect, isLoading: walletConnecting } = useWallet();
   const sui = useSuiClient();
   const { data: listingsData, isLoading, refetch } = useListings();
   const [listings, setListings] = useState<ListingData[]>([]);
+  const [mockLoading, setMockLoading] = useState(MOCK_MODE);
   const { showToast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [sortBy, setSortBy] = useState<string>("newest");
 
-  const categories = [
-    { id: "all", name: "All Categories" },
-    { id: "nfts", name: "NFTs" },
-    { id: "gaming", name: "Gaming" },
-    { id: "art", name: "Art" },
-    { id: "collectibles", name: "Collectibles" },
-    { id: "music", name: "Music" },
-    { id: "sports", name: "Sports" },
-    { id: "virtual-worlds", name: "Virtual Worlds" },
-  ];
+  const categories = [{ id: "all", name: "All Categories" }, ...LISTING_CATEGORIES];
 
   const sortOptions = [
     { id: "newest", name: "Newest First" },
@@ -68,6 +61,7 @@ export default function HomeClient() {
       if (MOCK_MODE) {
         const data = await mockMarketplace.getListings();
         setListings(data as any);
+        setMockLoading(false);
       } else if (listingsData) {
         setListings(listingsData as any);
       }
@@ -81,7 +75,7 @@ export default function HomeClient() {
                           listing.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                           listing.category?.toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesCategory = selectedCategory === "all" || listing.category === selectedCategory;
+      const matchesCategory = selectedCategory === "all" || categoryKey(listing.category) === selectedCategory;
       
       return matchesSearch && matchesCategory && listing.status === 'active';
     });
@@ -195,7 +189,13 @@ export default function HomeClient() {
             )}
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               {!currentAccount ? (
-                <ConnectButton />
+                MOCK_MODE ? (
+                  <Button size="lg" className="text-lg px-8 py-4" onClick={() => connect()} disabled={walletConnecting}>
+                    {walletConnecting ? 'Connecting...' : 'Connect Demo Wallet'}
+                  </Button>
+                ) : (
+                  <ConnectButton />
+                )
               ) : (
                 <div className="flex items-center gap-4">
                   <span className="text-[#636871]">Connected:</span>
@@ -216,7 +216,7 @@ export default function HomeClient() {
 
       {/* Stats Section */}
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <MarketStats />
+        <MarketStats listings={listings} currentUserAddress={currentAccount?.address} />
       </div>
 
       {/* Filters Section */}
@@ -257,7 +257,7 @@ export default function HomeClient() {
 
       {/* Listings Grid */}
       <div className="max-w-7xl mx-auto px-6 pb-12">
-        {(((MOCK_MODE && isLoading && listings.length === 0) || (!MOCK_MODE && isLoading))) ? (
+        {(MOCK_MODE ? mockLoading : isLoading) ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[...Array(8)].map((_, i) => (
               <Card key={i} className="animate-pulse">
@@ -284,18 +284,14 @@ export default function HomeClient() {
             {filteredAndSortedListings.map((listing) => (
               <Card key={listing.listing_id} variant="elevated" className="overflow-hidden">
                 <div className="relative">
-                  <div className="h-48 bg-gradient-to-br from-[#6fbcf0] to-[#0284ad] flex items-center justify-center">
-                    {listing.imageUrl ? (
-                      <Image
-                        src={listing.imageUrl}
-                        alt={listing.title || 'Listing image'}
-                        width={800}
-                        height={192}
-                        className="w-full h-48 object-cover"
-                      />
-                    ) : (
-                      <div className="text-white text-4xl">🎨</div>
-                    )}
+                  <div className="h-48 bg-gradient-to-br from-[#e1f3ff] to-[#f3f6f8] flex items-center justify-center overflow-hidden rounded-t-xl">
+                    <Image
+                      src={listingImage(listing)}
+                      alt={listing.title || 'Listing image'}
+                      width={800}
+                      height={400}
+                      className="w-full h-48 object-cover"
+                    />
                     {listing.isAuction && (
                       <div className="absolute top-2 right-2 bg-[#f5cf54] text-[#8d6e15] px-2 py-1 rounded text-xs font-medium">
                         Auction
@@ -305,11 +301,11 @@ export default function HomeClient() {
                 </div>
                 <CardContent>
                   <div className="flex justify-between items-start mb-2">
-                    <h3 className="font-semibold text-[#182435] text-lg truncate">
+                    <h3 className="font-semibold text-[#182435] text-lg truncate min-w-0">
                       {listing.title || "Untitled Item"}
                     </h3>
-                    <span className="text-[#636871] text-sm">
-                      {listing.category}
+                    <span className="text-[#636871] text-sm whitespace-nowrap ml-2 mt-1">
+                      {categoryName(listing.category)}
                     </span>
                   </div>
                   <p className="text-[#636871] text-sm mb-4 line-clamp-2">
@@ -332,13 +328,19 @@ export default function HomeClient() {
                      <Link href={`/listing?id=${listing.listing_id}`} className="flex-1">
                        <Button className="w-full">View</Button>
                      </Link>
-                     <Button
-                       onClick={() => handleBuy(listing.listing_id)}
-                       className="flex-1"
-                       disabled={!currentAccount || listing.isAuction}
-                     >
-                       {listing.isAuction ? 'Bid' : (currentAccount ? 'Buy Now' : 'Connect to Buy')}
-                     </Button>
+                     {listing.isAuction ? (
+                       <Link href={`/listing?id=${listing.listing_id}`} className="flex-1">
+                         <Button variant="outline" className="w-full">Bid</Button>
+                       </Link>
+                     ) : (
+                       <Button
+                         onClick={() => (currentAccount || !MOCK_MODE ? handleBuy(listing.listing_id) : connect())}
+                         className="flex-1 whitespace-nowrap"
+                         disabled={!currentAccount && !MOCK_MODE}
+                       >
+                         {currentAccount ? 'Buy Now' : 'Connect to Buy'}
+                       </Button>
+                     )}
                     {currentAccount && listing.seller === currentAccount.address && (
                       <Button
                         variant="outline"

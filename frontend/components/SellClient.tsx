@@ -12,6 +12,7 @@ import { mockMarketplace } from '../lib/mockData';
 import { MOCK_MODE } from '../lib/config';
 import { useSuiClient } from '../lib/suiClient';
 import { useToast } from './ToastProvider';
+import { LISTING_CATEGORIES } from '../lib/categories';
 
 interface ValidationErrors {
   title?: string;
@@ -36,19 +37,11 @@ export default function SellClient() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
 
-  const { currentAccount } = useWallet();
+  const { currentAccount, connect } = useWallet();
+  const needsDemoWallet = MOCK_MODE && !currentAccount;
   const router = useRouter();
 
-  const categories = [
-    { id: 'nfts', name: 'NFTs' },
-    { id: 'gaming', name: 'Gaming' },
-    { id: 'art', name: 'Art' },
-    { id: 'collectibles', name: 'Collectibles' },
-    { id: 'music', name: 'Music' },
-    { id: 'sports', name: 'Sports' },
-    { id: 'virtual-worlds', name: 'Virtual Worlds' },
-    { id: 'other', name: 'Other' },
-  ];
+  const categories = LISTING_CATEGORIES;
 
   const validateForm = (): boolean => {
     const errors: ValidationErrors = {};
@@ -328,8 +321,9 @@ export default function SellClient() {
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button
-                  type="submit"
-                  disabled={loading || !currentAccount}
+                  type={needsDemoWallet ? 'button' : 'submit'}
+                  onClick={needsDemoWallet ? () => connect() : undefined}
+                  disabled={loading || (!currentAccount && !MOCK_MODE)}
                   className="flex-1"
                   size="lg"
                 >
@@ -342,7 +336,7 @@ export default function SellClient() {
                       Creating Listing...
                     </>
                   ) : !currentAccount ? (
-                    'Connect Wallet to List'
+                    MOCK_MODE ? 'Connect Demo Wallet' : 'Connect Wallet to List'
                   ) : (
                     'Create Listing'
                   )}

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useSyncExternalStore } from 'react';
 import { MOCK_WALLET_ADDRESS, MOCK_WALLET_NAME } from './config';
 
 export interface MockAccount {
@@ -23,8 +23,25 @@ export interface MockWalletKit {
   isLoading: boolean;
 }
 
+// The demo wallet is shared by every component (and survives client-side
+// navigation), so connecting once on any page connects the whole app.
+let sharedAccount: MockAccount | null = null;
+const listeners = new Set<() => void>();
+
+function setCurrentAccount(account: MockAccount | null) {
+  sharedAccount = account;
+  listeners.forEach((listener) => listener());
+}
+
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 export function useMockWalletKit(): MockWalletKit {
-  const [currentAccount, setCurrentAccount] = useState<MockAccount | null>(null);
+  const currentAccount = useSyncExternalStore(subscribe, () => sharedAccount, () => null);
   const [isLoading, setIsLoading] = useState(false);
 
   const mockAccount: MockAccount = useMemo(() => ({

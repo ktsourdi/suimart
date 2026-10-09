@@ -2,7 +2,7 @@ import { PACKAGE_ID } from './config';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
 import { Transaction } from '@mysten/sui/transactions';
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
-import { SUI_NETWORK } from './config';
+import { SUI_NETWORK, MOCK_MODE } from './config';
 import { useQuery } from '@tanstack/react-query';
 
 export interface CreateListingInput {
@@ -211,6 +211,8 @@ export function useListings() {
   return useQuery({
     queryKey: ['listings', SUI_NETWORK, PACKAGE_ID],
     queryFn: () => sui.getListings(),
+    // Mock mode reads lib/mockData.ts; do not query the chain.
+    enabled: !MOCK_MODE,
     staleTime: 30_000,
     refetchOnWindowFocus: false,
   });

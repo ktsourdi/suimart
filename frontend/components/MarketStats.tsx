@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { Card, CardContent } from './ui/Card';
+import { MOCK_MODE } from '../lib/config';
 
 interface MarketStatsProps {
   listings?: any[];
@@ -35,36 +36,45 @@ export default function MarketStats({ listings = [], currentUserAddress }: Marke
     return `${price.toFixed(2)} SUI`;
   };
 
+  // The three most recently created listings.
+  const recentActivity = useMemo(
+    () => [...listings].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)).slice(0, 3),
+    [listings]
+  );
+
+  const timeAgo = (timestamp?: number) => {
+    if (!timestamp) return '';
+    const minutes = Math.max(0, Math.floor((Date.now() - timestamp) / 60000));
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    const days = Math.floor(hours / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+  };
+
   const statCards = [
     {
       title: 'Total Listings',
       value: stats.totalListings,
-      change: '+12%',
-      changeType: 'positive' as const,
       icon: '📦',
       color: 'from-[#6fbcf0] to-[#0284ad]'
     },
     {
       title: 'Active Items',
       value: stats.activeListings,
-      change: '+8%',
-      changeType: 'positive' as const,
       icon: '🟢',
       color: 'from-[#2dd7a7] to-[#008c65]'
     },
     {
       title: 'Total Value',
       value: formatPrice(stats.totalValue),
-      change: '+15%',
-      changeType: 'positive' as const,
       icon: '💰',
       color: 'from-[#f5cf54] to-[#8d6e15]'
     },
     {
       title: 'Avg Price',
       value: formatPrice(stats.avgPrice),
-      change: '+5%',
-      changeType: 'positive' as const,
       icon: '📊',
       color: 'from-[#ff794b] to-[#eb5a29]'
     }
@@ -74,27 +84,24 @@ export default function MarketStats({ listings = [], currentUserAddress }: Marke
     <div className="space-y-6">
       <div className="text-center">
         <h2 className="text-2xl font-bold text-[#182435] mb-2">Market Overview</h2>
-        <p className="text-[#636871]">Real-time statistics from the Suimart marketplace</p>
+        <p className="text-[#636871]">
+          {MOCK_MODE
+            ? 'Computed from the demo listings below'
+            : 'Live statistics from the Suimart marketplace'}
+        </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {statCards.map((stat, index) => (
           <Card key={index} variant="elevated" className="relative overflow-hidden">
             <div className={`absolute inset-0 bg-gradient-to-r ${stat.color} opacity-5`}></div>
-            <CardContent className="relative p-6">
-              <div className="flex items-center justify-between mb-4">
+            <CardContent className="relative p-4 md:p-6">
+              <div className="mb-3 md:mb-4">
                 <div className="text-2xl">{stat.icon}</div>
-                <div className={`text-xs px-2 py-1 rounded-full ${
-                  stat.changeType === 'positive' 
-                    ? 'bg-[#d5f7ee] text-[#008c65]' 
-                    : 'bg-[#ffece6] text-[#ff794b]'
-                }`}>
-                  {stat.change}
-                </div>
               </div>
               <div className="space-y-1">
                 <h3 className="text-sm font-medium text-[#636871]">{stat.title}</h3>
-                <p className="text-2xl font-bold text-[#182435]">{stat.value}</p>
+                <p className="text-xl md:text-2xl font-bold text-[#182435]">{stat.value}</p>
               </div>
             </CardContent>
           </Card>
@@ -102,11 +109,11 @@ export default function MarketStats({ listings = [], currentUserAddress }: Marke
       </div>
 
       {/* Additional Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-6">
         <Card className="bg-gradient-to-br from-[#e1f3ff] to-[#f3f6f8] border-[#6fbcf0]">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#6fbcf0] rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 bg-[#6fbcf0] rounded-lg flex items-center justify-center">
                 <span className="text-white text-xl">🎯</span>
               </div>
               <div>
@@ -118,9 +125,9 @@ export default function MarketStats({ listings = [], currentUserAddress }: Marke
         </Card>
 
         <Card className="bg-gradient-to-br from-[#fff8e2] to-[#f3f6f8] border-[#f5cf54]">
-          <CardContent className="p-6">
+          <CardContent className="p-4 md:p-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-[#f5cf54] rounded-lg flex items-center justify-center">
+              <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 bg-[#f5cf54] rounded-lg flex items-center justify-center">
                 <span className="text-white text-xl">⚡</span>
               </div>
               <div>
@@ -133,9 +140,9 @@ export default function MarketStats({ listings = [], currentUserAddress }: Marke
 
         {currentUserAddress && (
           <Card className="bg-gradient-to-br from-[#d5f7ee] to-[#f3f6f8] border-[#2dd7a7]">
-            <CardContent className="p-6">
+            <CardContent className="p-4 md:p-6">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-[#2dd7a7] rounded-lg flex items-center justify-center">
+                <div className="w-10 h-10 md:w-12 md:h-12 shrink-0 bg-[#2dd7a7] rounded-lg flex items-center justify-center">
                   <span className="text-white text-xl">👤</span>
                 </div>
                 <div>
@@ -152,46 +159,30 @@ export default function MarketStats({ listings = [], currentUserAddress }: Marke
       <Card>
         <CardContent className="p-6">
           <h3 className="text-lg font-semibold text-[#182435] mb-4">Recent Activity</h3>
-          <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-[#f3f6f8] rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-[#6fbcf0] rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm">💰</span>
+          {recentActivity.length === 0 ? (
+            <p className="text-sm text-[#636871]">No listings yet.</p>
+          ) : (
+            <div className="space-y-3">
+              {recentActivity.map((l) => (
+                <div key={l.listing_id} className="flex items-center justify-between gap-3 p-3 bg-[#f3f6f8] rounded-lg">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center ${l.isAuction ? 'bg-[#f5cf54]' : 'bg-[#6fbcf0]'}`}>
+                      <span className="text-white text-sm">{l.isAuction ? '⚡' : '💰'}</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-[#182435] truncate">{l.title || 'Untitled item'}</p>
+                      <p className="text-xs text-[#636871] truncate">
+                        {l.isAuction ? 'Auction started' : 'Listed'} · {timeAgo(l.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-sm text-[#636871] whitespace-nowrap">
+                    {l.isAuction ? `Bid: ${formatPrice(l.currentBid ?? l.price ?? 0)}` : formatPrice(l.price || 0)}
+                  </span>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-[#182435]">New listing created</p>
-                  <p className="text-xs text-[#636871]">2 minutes ago</p>
-                </div>
-              </div>
-              <span className="text-sm text-[#636871]">+1 listing</span>
+              ))}
             </div>
-            
-            <div className="flex items-center justify-between p-3 bg-[#f3f6f8] rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-[#2dd7a7] rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm">✅</span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-[#182435]">Item sold</p>
-                  <p className="text-xs text-[#636871]">5 minutes ago</p>
-                </div>
-              </div>
-              <span className="text-sm text-[#636871]">+25.5 SUI</span>
-            </div>
-            
-            <div className="flex items-center justify-between p-3 bg-[#f3f6f8] rounded-lg">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-[#f5cf54] rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm">⚡</span>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-[#182435]">New auction started</p>
-                  <p className="text-xs text-[#636871]">10 minutes ago</p>
-                </div>
-              </div>
-              <span className="text-sm text-[#636871]">Starting: 10 SUI</span>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

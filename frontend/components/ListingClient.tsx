@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import Button from './ui/Button';
 import { Card, CardContent } from './ui/Card';
@@ -10,10 +10,15 @@ import { MOCK_MODE } from '../lib/config';
 import { useSuiClient } from '../lib/suiClient';
 import { useToast } from './ToastProvider';
 import Image from 'next/image';
+import { categoryName, listingImage } from '../lib/categories';
 
 export default function ListingClient() {
-  const { currentAccount } = useWallet();
+  const { currentAccount, connect } = useWallet();
   const sui = useSuiClient();
+  // useSuiClient() returns a new object on every render; keep the latest in a ref
+  // so the loader below runs once per listing id instead of on every render.
+  const suiRef = useRef(sui);
+  suiRef.current = sui;
   const { showToast } = useToast();
 
   const [listingId, setListingId] = useState<string>('');
@@ -27,6 +32,7 @@ export default function ListingClient() {
       const url = new URL(window.location.href);
       const id = url.searchParams.get('id') || '';
       setListingId(id);
+      if (!id) setLoading(false);
     }
   }, []);
 
@@ -35,14 +41,15 @@ export default function ListingClient() {
     let mounted = true;
     const load = async () => {
       setLoading(true);
-      const items = MOCK_MODE ? await mockMarketplace.getListings() : await sui.getListings();
+      const items = MOCK_MODE ? await mockMarketplace.getListings() : await suiRef.current.getListings();
       const found = items.find((l) => l.listing_id === listingId) || null;
-      if (mounted) setListing(found);
+      if (!mounted) return;
+      setListing(found);
       setLoading(false);
     };
     load();
     return () => { mounted = false; };
-  }, [listingId, sui]);
+  }, [listingId]);
 
   const isOwner = useMemo(() => {
     return !!currentAccount && listing?.seller === currentAccount.address;
@@ -179,21 +186,17 @@ export default function ListingClient() {
       )}
 
       <Card>
-        <div className="h-64 bg-gradient-to-br from-[#6fbcf0] to-[#0284ad] flex items-center justify-center overflow-hidden">
-          {listing.imageUrl ? (
-            <Image src={listing.imageUrl} alt={listing.title} width={1024} height={256} className="w-full h-64 object-cover" />
-          ) : (
-            <div className="text-white text-5xl">🎨</div>
-          )}
+        <div className="h-64 bg-gradient-to-br from-[#e1f3ff] to-[#f3f6f8] flex items-center justify-center overflow-hidden rounded-t-xl">
+          <Image src={listingImage(listing)} alt={listing.title} width={800} height={400} className="w-full h-64 object-cover" priority />
         </div>
         <CardContent>
-          <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
             <div>
               <h2 className="text-2xl font-semibold text-[#182435]">{listing.title}</h2>
               <p className="text-[#636871] mt-2">{listing.description}</p>
-              <div className="mt-4 text-sm text-[#636871]">Category: {listing.category}</div>
+              <div className="mt-4 text-sm text-[#636871]">Category: {categoryName(listing.category)}</div>
             </div>
-            <div className="text-right">
+            <div className="sm:text-right shrink-0">
               <div className="text-3xl font-bold text-[#6fbcf0]">{listing.price.toFixed(2)} SUI</div>
               <div className="text-sm text-[#636871] mt-1">Seller: {listing.seller.slice(0,6)}...{listing.seller.slice(-4)}</div>
             </div>
@@ -211,7 +214,7 @@ export default function ListingClient() {
                   <div className="text-lg font-medium">{timeRemaining ?? 'Ended'}</div>
                 </div>
               </div>
-              <div className="mt-4 flex gap-3">
+              <div className="mt-4 flex flex-col sm:flex-row gap-3">
                 <input
                   type="number"
                   placeholder="Your bid"
@@ -221,7 +224,11 @@ export default function ListingClient() {
                   min="0"
                   step="0.01"
                 />
-                <Button onClick={handleBid} disabled={!currentAccount || actionLoading}>Place Bid</Button>
+                {MOCK_MODE && !currentAccount ? (
+                  <Button onClick={() => connect()}>Connect Demo Wallet</Button>
+                ) : (
+                  <Button onClick={handleBid} disabled={!currentAccount || actionLoading}>Place Bid</Button>
+                )}
                 <Button variant="outline" onClick={handleEndAuction} disabled={actionLoading}>End Auction</Button>
               </div>
             </div>
@@ -229,7 +236,11 @@ export default function ListingClient() {
 
           {!listing.isAuction && (
             <div className="mt-6 flex gap-3">
-              <Button onClick={handleBuy} disabled={!currentAccount || actionLoading}>{currentAccount ? 'Buy Now' : 'Connect to Buy'}</Button>
+              {MOCK_MODE && !currentAccount ? (
+                <Button onClick={() => connect()}>Connect Demo Wallet</Button>
+              ) : (
+                <Button onClick={handleBuy} disabled={!currentAccount || actionLoading}>{currentAccount ? 'Buy Now' : 'Connect to Buy'}</Button>
+              )}
               {isOwner && (
                 <Button variant="outline" onClick={handleCancel} disabled={actionLoading}>Cancel</Button>
               )}

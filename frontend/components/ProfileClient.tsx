@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useCurrentAccount } from '@mysten/dapp-kit';
 import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { PACKAGE_ID, SUI_NETWORK } from '../lib/config';
+import { PACKAGE_ID, SUI_NETWORK, MOCK_MODE } from '../lib/config';
+import { useWallet } from '../lib/useWallet';
+import { mockMarketplace } from '../lib/mockData';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
 import Button from './ui/Button';
 import Input from './ui/Input';
@@ -22,8 +23,14 @@ interface UserProfile {
 }
 
 export default function ProfileClient() {
-  const currentAccount = useCurrentAccount();
-  const { data: listingsData, isLoading: listingsLoading } = useListings();
+  const { currentAccount, connect } = useWallet();
+  const { data: chainListings, isLoading: chainListingsLoading } = useListings();
+  const [mockListings, setMockListings] = useState<any[] | null>(null);
+  useEffect(() => {
+    if (MOCK_MODE) mockMarketplace.getListings().then(setMockListings);
+  }, []);
+  const listingsData = MOCK_MODE ? mockListings : chainListings;
+  const listingsLoading = MOCK_MODE ? mockListings === null : chainListingsLoading;
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -143,9 +150,14 @@ export default function ProfileClient() {
         <div className="text-center">
           <h1 className="text-3xl font-bold mb-4">Profile</h1>
           <p className="text-muted-foreground mb-6">Please connect your wallet to view your profile</p>
-          <Link href="/">
-            <Button>Back to Marketplace</Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            {MOCK_MODE && (
+              <Button onClick={() => connect()}>Connect Demo Wallet</Button>
+            )}
+            <Link href="/">
+              <Button variant={MOCK_MODE ? 'outline' : 'primary'}>Back to Marketplace</Button>
+            </Link>
+          </div>
         </div>
       </main>
     );
