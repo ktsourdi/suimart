@@ -33,7 +33,6 @@ export const mockUsers: MockUser[] = [
   {
     address: '0x1234567890abcdef1234567890abcdef12345678',
     name: 'Alice Crypto',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice',
     reputation: 4.8,
     listings: ['listing_1', 'listing_3'],
     purchases: ['listing_2']
@@ -41,7 +40,6 @@ export const mockUsers: MockUser[] = [
   {
     address: '0xabcdef1234567890abcdef1234567890abcdef12',
     name: 'Bob NFT',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob',
     reputation: 4.6,
     listings: ['listing_2', 'listing_4'],
     purchases: ['listing_1']
@@ -49,7 +47,6 @@ export const mockUsers: MockUser[] = [
   {
     address: '0x9876543210fedcba9876543210fedcba98765432',
     name: 'Carol Artist',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Carol',
     reputation: 4.9,
     listings: ['listing_5', 'listing_6'],
     purchases: []
@@ -72,7 +69,7 @@ export const mockListings: MockListing[] = [
     favorites: 12,
     isAuction: false,
     status: 'active',
-    imageUrl: 'https://picsum.photos/400/300?random=1'
+    imageUrl: '/listings/nfts.svg'
   },
   {
     listing_id: 'listing_2',
@@ -88,7 +85,7 @@ export const mockListings: MockListing[] = [
     favorites: 8,
     isAuction: false,
     status: 'active',
-    imageUrl: 'https://picsum.photos/400/300?random=2'
+    imageUrl: '/listings/gaming.svg'
   },
   {
     listing_id: 'listing_3',
@@ -107,7 +104,7 @@ export const mockListings: MockListing[] = [
     currentBid: 28.5,
     highestBidder: '0x9876543210fedcba9876543210fedcba98765432',
     status: 'active',
-    imageUrl: 'https://picsum.photos/400/300?random=3'
+    imageUrl: '/listings/art.svg'
   },
   {
     listing_id: 'listing_4',
@@ -123,7 +120,7 @@ export const mockListings: MockListing[] = [
     favorites: 5,
     isAuction: false,
     status: 'active',
-    imageUrl: 'https://picsum.photos/400/300?random=4'
+    imageUrl: '/listings/sports.svg'
   },
   {
     listing_id: 'listing_5',
@@ -139,7 +136,7 @@ export const mockListings: MockListing[] = [
     favorites: 3,
     isAuction: false,
     status: 'active',
-    imageUrl: 'https://picsum.photos/400/300?random=5'
+    imageUrl: '/listings/music.svg'
   },
   {
     listing_id: 'listing_6',
@@ -148,7 +145,7 @@ export const mockListings: MockListing[] = [
     itemType: '0x2::devnet_nft::DevNFT',
     title: 'Virtual Real Estate Plot',
     description: 'Premium virtual real estate in a popular metaverse. Strategic location with high foot traffic and development potential.',
-    category: 'Real Estate',
+    category: 'Virtual Worlds',
     createdAt: Date.now() - 86400000 * 10, // 10 days ago
     updatedAt: Date.now() - 86400000 * 10,
     views: 456,
@@ -158,7 +155,7 @@ export const mockListings: MockListing[] = [
     currentBid: 165.0,
     highestBidder: '0x1234567890abcdef1234567890abcdef12345678',
     status: 'active',
-    imageUrl: 'https://picsum.photos/400/300?random=6'
+    imageUrl: '/listings/virtual-worlds.svg'
   }
 ];
 

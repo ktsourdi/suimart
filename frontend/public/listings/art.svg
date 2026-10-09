@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400" role="img" aria-label="art illustration">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fff1eb"/>
+      <stop offset="1" stop-color="#ffc4ad"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffffff" stop-opacity=".75"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="14" stdDeviation="16" flood-color="#d9481c" flood-opacity=".22"/>
+    </filter>
+  </defs>
+  <rect width="800" height="400" fill="url(#bg)"/>
+  <circle cx="400" cy="200" r="260" fill="url(#glow)"/>
+  <g fill="none" stroke="#ffffff">
+    <circle cx="400" cy="200" r="150" stroke-opacity=".7" stroke-width="2"/>
+    <circle cx="400" cy="200" r="215" stroke-opacity=".45" stroke-width="2"/>
+    <circle cx="400" cy="200" r="290" stroke-opacity=".28" stroke-width="2"/>
+  </g>
+  <circle cx="214" cy="292" r="12" fill="#d9481c" fill-opacity=".18"/>
+  <circle cx="596" cy="112" r="16" fill="#ffffff" fill-opacity=".85"/>
+  <circle cx="632" cy="268" r="7" fill="#d9481c" fill-opacity=".3"/>
+  <circle cx="170" cy="150" r="6" fill="#ffffff" fill-opacity=".9"/>
+  <rect x="604" y="196" width="26" height="26" rx="7" transform="rotate(18 617 209)" fill="#ffffff" fill-opacity=".55"/>
+  <rect x="158" y="214" width="20" height="20" rx="6" transform="rotate(-14 168 224)" fill="#d9481c" fill-opacity=".14"/>
+  <path d="M236 104 Q236 118 250 118 Q236 118 236 132 Q236 118 222 118 Q236 118 236 104 Z" fill="#ffffff" fill-opacity="0.95"/>
+  <path d="M574 288 Q574 300 586 300 Q574 300 574 312 Q574 300 562 300 Q574 300 574 288 Z" fill="#d9481c" fill-opacity="0.35"/>
+  <rect x="295" y="95" width="210" height="210" rx="52" fill="#ffffff" fill-opacity=".94" filter="url(#shadow)"/>
+  <g transform="translate(310 110) scale(0.9)">
+      <path d="M100 40 C64 40 36 66 36 100 C36 134 64 160 96 160 C106 160 110 154 110 148 C110 140 104 138 104 130 C104 122 110 118 118 118 H132 C150 118 164 106 164 88 C164 60 136 40 100 40 Z" fill="#ff794b" fill-opacity=".14" stroke="#d9481c" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="66" cy="98" r="10" fill="#ff794b"/>
+      <circle cx="78" cy="68" r="10" fill="#f5cf54"/>
+      <circle cx="108" cy="60" r="10" fill="#2dd7a7"/>
+      <circle cx="138" cy="74" r="10" fill="#6fbcf0"/>
+  </g>
+</svg>
