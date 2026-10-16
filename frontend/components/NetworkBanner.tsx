@@ -1,33 +1,40 @@
 'use client';
 
-import { PACKAGE_ID, SUI_NETWORK, MOCK_MODE } from '../lib/config';
+import { TriangleAlert } from 'lucide-react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
+import { MOCK_MODE, PACKAGE_ID, SUI_NETWORK } from '../lib/config';
 
+const EMPTY_PACKAGE = '0x0000000000000000000000000000000000000000000000000000000000000000';
+
+/**
+ * Rendered once by the layout, under the header. In MOCK_MODE it renders nothing
+ * (the header's "Demo" pill covers it). In real mode it is a slim amber notice
+ * while the package id is missing or no wallet is connected.
+ */
 export default function NetworkBanner() {
   const account = useCurrentAccount();
-  const missingPackage = !PACKAGE_ID || PACKAGE_ID === '0x0000000000000000000000000000000000000000000000000000000000000000';
+  const missingPackage = !PACKAGE_ID || PACKAGE_ID === EMPTY_PACKAGE;
 
-  if (!MOCK_MODE && !missingPackage && account) return null;
+  if (MOCK_MODE) return null;
+  if (!missingPackage && account) return null;
 
   return (
-    <div className="w-full bg-[#fff8e2] border-b border-[#f5cf54] text-[#8d6e15]">
-      <div className="max-w-7xl mx-auto px-6 py-2 text-sm flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 bg-[#f5cf54] rounded-full"></span>
-          {MOCK_MODE ? (
-            <span>
-              Demo mode: listings and the wallet are simulated. Nothing is sent to <strong>{SUI_NETWORK}</strong>.
-            </span>
-          ) : missingPackage ? (
-            <span>
-              Marketplace package not set. Add <code className="px-1 bg-white border rounded">NEXT_PUBLIC_MARKETPLACE_PACKAGE</code> to .env.local.
-            </span>
-          ) : (
-            <span>
-              Connect a wallet to use the marketplace on <strong>{SUI_NETWORK}</strong>.
-            </span>
-          )}
-        </div>
+    <div role="status" className="border-b border-warning/15 bg-warning/[0.06]">
+      <div className="container-page flex min-h-10 items-center gap-2.5 py-2 text-[13px] leading-5 text-fg-muted">
+        <TriangleAlert aria-hidden="true" className="h-4 w-4 shrink-0 text-warning" strokeWidth={1.75} />
+        {missingPackage ? (
+          <p>
+            <span className="font-medium text-fg">Marketplace package not set.</span> Add{' '}
+            <code className="rounded border border-line-strong bg-surface-2 px-1.5 py-0.5 font-mono text-xs text-fg">
+              NEXT_PUBLIC_MARKETPLACE_PACKAGE
+            </code>{' '}
+            to .env.local.
+          </p>
+        ) : (
+          <p>
+            Connect a wallet to use the marketplace on <span className="font-medium capitalize text-fg">{SUI_NETWORK}</span>.
+          </p>
+        )}
       </div>
     </div>
   );

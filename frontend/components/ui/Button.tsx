@@ -1,43 +1,67 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react';
+import { LoaderCircle } from 'lucide-react';
+import { cn } from './cn';
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+export type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+export type ButtonSize = 'sm' | 'md' | 'lg' | 'icon-sm' | 'icon';
+
+const base =
+  'relative inline-flex shrink-0 select-none items-center justify-center whitespace-nowrap rounded-control font-medium ' +
+  'transition-[background-color,border-color,color,box-shadow,transform] duration-150 ease-out ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg ' +
+  'disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 ' +
+  'motion-safe:active:translate-y-px';
+
+const variants: Record<ButtonVariant, string> = {
+  primary: 'bg-accent font-semibold text-accent-fg shadow-button hover:bg-accent-hover',
+  secondary: 'border border-line-strong bg-surface-2 text-fg hover:border-fg-subtle/30 hover:bg-surface-3',
+  // Kept for older markup: same look as secondary.
+  outline: 'border border-line-strong bg-surface-2 text-fg hover:border-fg-subtle/30 hover:bg-surface-3',
+  ghost: 'text-fg-muted hover:bg-surface-2 hover:text-fg',
+  danger: 'border border-danger/25 bg-danger/10 text-danger hover:border-danger/40 hover:bg-danger/[0.16]',
+};
+
+const sizes: Record<ButtonSize, string> = {
+  sm: 'h-8 gap-1.5 px-3 text-[13px]',
+  md: 'h-10 gap-2 px-4 text-sm',
+  lg: 'h-12 gap-2 px-5 text-[15px]',
+  'icon-sm': 'h-8 w-8',
+  icon: 'h-10 w-10',
+};
+
+export interface ButtonVariantOptions {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+}
+
+/**
+ * The button classes, for links that look like buttons:
+ * <Link href="/sell" className={buttonVariants({ variant: 'secondary', size: 'lg' })}>List an item</Link>
+ */
+export function buttonVariants({ variant = 'primary', size = 'md', className }: ButtonVariantOptions = {}): string {
+  return cn(base, variants[variant] ?? variants.primary, sizes[size] ?? sizes.md, className);
+}
+
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  /** Shows a spinner and disables the button. */
   loading?: boolean;
 }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className = '', variant = 'primary', size = 'md', loading = false, children, disabled, ...props }, ref) => {
-    const baseClasses = 'inline-flex items-center justify-center font-semibold rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
-    
-    const variantClasses = {
-      primary: 'bg-[#6fbcf0] text-white border border-[#6fbcf0] hover:bg-[#1f6493] hover:border-[#1f6493] focus:ring-[#6fbcf0] shadow-sm hover:shadow-md hover:-translate-y-0.5',
-      secondary: 'bg-[#e1f3ff] text-[#1f6493] border border-[#6fbcf0] hover:bg-[#6fbcf0] hover:text-white focus:ring-[#6fbcf0]',
-      outline: 'bg-transparent text-[#6fbcf0] border-2 border-[#6fbcf0] hover:bg-[#6fbcf0] hover:text-white focus:ring-[#6fbcf0]',
-      ghost: 'bg-transparent text-[#636871] border border-transparent hover:bg-[#f3f6f8] hover:text-[#182435] focus:ring-[#6fbcf0]'
-    };
-    
-    const sizeClasses = {
-      sm: 'px-3 py-1.5 text-sm',
-      md: 'px-4 py-2 text-sm',
-      lg: 'px-6 py-3 text-base'
-    };
-    
-    const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
-    
+  ({ className, variant = 'primary', size = 'md', loading = false, children, disabled, type = 'button', ...props }, ref) => {
     return (
       <button
         ref={ref}
-        className={classes}
+        type={type}
+        className={buttonVariants({ variant, size, className })}
         disabled={disabled || loading}
+        aria-busy={loading || undefined}
         {...props}
       >
-        {loading && (
-          <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        )}
+        {loading && <LoaderCircle aria-hidden="true" className="h-4 w-4 motion-safe:animate-spin" strokeWidth={2} />}
         {children}
       </button>
     );
@@ -46,4 +70,5 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 
 Button.displayName = 'Button';
 
+export { Button };
 export default Button;

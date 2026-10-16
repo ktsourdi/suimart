@@ -1,33 +1,62 @@
-import { TextareaHTMLAttributes, forwardRef } from 'react';
+import { ReactNode, TextareaHTMLAttributes, forwardRef, useId } from 'react';
+import { FieldLabel, FieldMessage, fieldBoxClasses } from './Input';
+import { cn } from './cn';
 
-interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label?: string;
+export interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
+  label?: ReactNode;
+  hideLabel?: boolean;
+  optional?: boolean;
   error?: string;
-  helperText?: string;
+  helperText?: ReactNode;
+  /** With maxLength, shows a "120 / 500" counter under the field. */
+  showCount?: boolean;
+  /** Classes for the <textarea> itself. */
+  className?: string;
+  /** Classes for the outer wrapper (label + field + messages). */
+  containerClassName?: string;
 }
 
 const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className = '', label, error, helperText, ...props }, ref) => {
+  (
+    { className, containerClassName, label, hideLabel, optional, error, helperText, showCount, id, disabled, maxLength, value, ...props },
+    ref
+  ) => {
+    const autoId = useId();
+    const fieldId = id ?? `textarea-${autoId}`;
+    const messageId = `${fieldId}-message`;
+    const hasMessage = Boolean(error || helperText);
+    const length = typeof value === 'string' ? value.length : 0;
+
     return (
-      <div className="w-full">
-        {label && (
-          <label className="block text-sm font-medium text-[#182435] mb-2">
-            {label}
-          </label>
-        )}
+      <div className={cn('w-full', containerClassName)}>
+        {label && <FieldLabel htmlFor={fieldId} label={label} optional={optional} hidden={hideLabel} />}
         <textarea
           ref={ref}
-          className={`w-full px-4 py-3 border-2 border-[#cbd5e1] bg-white text-[#182435] rounded-lg transition-all duration-200 focus:outline-none focus:border-[#6fbcf0] focus:ring-2 focus:ring-[#6fbcf0] focus:ring-opacity-20 disabled:opacity-50 disabled:cursor-not-allowed placeholder:text-[#9ca3af] resize-vertical min-h-[100px] ${
-            error ? 'border-[#ff794b] focus:border-[#ff794b] focus:ring-[#ff794b]' : ''
-          } ${className}`}
+          id={fieldId}
+          disabled={disabled}
+          maxLength={maxLength}
+          value={value}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={hasMessage ? messageId : undefined}
+          className={cn(
+            'block min-h-[128px] w-full resize-y px-3 py-2.5 text-sm leading-6 placeholder:text-fg-subtle focus:outline-none',
+            fieldBoxClasses({ error: !!error, disabled }),
+            className
+          )}
           {...props}
         />
-        {error && (
-          <p className="mt-1 text-sm text-[#ff794b]">{error}</p>
-        )}
-        {helperText && !error && (
-          <p className="mt-1 text-sm text-[#636871]">{helperText}</p>
-        )}
+        <FieldMessage
+          id={messageId}
+          error={error}
+          helperText={helperText}
+          extra={
+            showCount && maxLength ? (
+              <span className="ml-auto shrink-0 tabular-nums text-fg-subtle">
+                {length} / {maxLength}
+              </span>
+            ) : undefined
+          }
+        />
       </div>
     );
   }
@@ -35,4 +64,5 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 
 Textarea.displayName = 'Textarea';
 
+export { Textarea };
 export default Textarea;

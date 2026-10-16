@@ -2,80 +2,324 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ----------------------------------------------------------------------------
+   Tokens. Colours are RGB channels so Tailwind can add alpha (bg-accent/10).
+   One dark theme only.
+---------------------------------------------------------------------------- */
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    --bg: 6 8 15;               /* #06080F */
+    --surface: 12 17 28;        /* #0C111C */
+    --surface-2: 19 26 40;      /* #131A28 */
+    --surface-3: 26 34 51;      /* #1A2233 */
+    --fg: 243 246 251;          /* #F3F6FB */
+    --fg-muted: 163 174 194;    /* #A3AEC2 */
+    --fg-subtle: 124 135 155;   /* #7C879B */
+    --accent: 77 162 255;       /* #4DA2FF Sui blue */
+    --accent-hover: 116 183 255;/* #74B7FF */
+    --accent-fg: 2 16 36;       /* #021024 */
+    --success: 52 211 153;      /* #34D399 */
+    --warning: 251 191 36;      /* #FBBF24 */
+    --danger: 248 113 113;      /* #F87171 */
+
+    /* Full colours, for raw CSS. Tailwind uses border-line / border-line-strong. */
+    --line: rgb(255 255 255 / 0.07);
+    --line-strong: rgb(255 255 255 / 0.12);
+
+    --header-height: 4rem;
+
+    color-scheme: dark;
   }
- 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+
+  *,
+  ::before,
+  ::after {
+    border-color: var(--line);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-padding-top: calc(var(--header-height) + 1rem);
+    background-color: rgb(var(--bg));
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    background-color: rgb(var(--bg));
+    /* One soft accent glow at the top centre of the page, scrolling with it. */
+    background-image:
+      radial-gradient(70rem 44rem at 50% -8rem, rgb(var(--accent) / 0.12), transparent 70%),
+      radial-gradient(36rem 24rem at 88% -6rem, rgb(var(--accent) / 0.05), transparent 70%);
+    background-repeat: no-repeat;
+    color: rgb(var(--fg));
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    font-feature-settings: 'calt' 1, 'kern' 1;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  ::selection {
+    background-color: rgb(var(--accent) / 0.32);
+    color: rgb(var(--fg));
+  }
+
+  /* Keyboard focus fallback for anything without its own focus-visible ring. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--accent));
+    outline-offset: 2px;
+  }
+
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Scrollbars */
+  html {
+    scrollbar-color: rgb(var(--surface-3)) transparent;
+    scrollbar-width: thin;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgb(var(--surface-3));
+    border: 3px solid rgb(var(--bg));
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(var(--fg-subtle) / 0.6);
+  }
+
+  /* Number inputs: no spinners, they clash with the SUI suffix. */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+
+  img,
+  svg {
+    -webkit-user-drag: none;
   }
 }
 
-@layer base {
-  * {
-    @apply border-border;
+/* ----------------------------------------------------------------------------
+   Reusable building blocks
+---------------------------------------------------------------------------- */
+@layer components {
+  /* Page container: mx-auto max-w-7xl px-5 sm:px-6 lg:px-8 */
+  .container-page {
+    @apply mx-auto w-full max-w-7xl px-5 sm:px-6 lg:px-8;
   }
-  body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+
+  /* Small uppercase label above titles and stats. */
+  .eyebrow {
+    @apply text-eyebrow font-medium uppercase text-fg-subtle;
+  }
+
+  /* The standard keyboard focus ring for interactive elements. */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-bg;
+  }
+
+  /* Frosted panel for overlays on artwork (hero showcase, image badges). */
+  .glass {
+    background-color: rgb(var(--surface) / 0.72);
+    border: 1px solid var(--line-strong);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    backdrop-filter: blur(18px) saturate(140%);
+  }
+
+  /* Hairline divider with fading ends. */
+  .divider-fade {
+    height: 1px;
+    background-image: linear-gradient(90deg, transparent, var(--line-strong) 20%, var(--line-strong) 80%, transparent);
+  }
+
+  /*
+    Faint grid behind a hero, masked so it fades out. Put it on the section:
+    <section className="hero-grid"> ... </section>. Content stays above it.
+  */
+  .hero-grid {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .hero-grid::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+    background-size: 56px 56px;
+    background-position: center top;
+    -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 0%, #000 30%, transparent 75%);
+    mask-image: radial-gradient(ellipse 70% 65% at 50% 0%, #000 30%, transparent 75%);
+  }
+
+  /* The same grid as a standalone layer: <div aria-hidden className="bg-grid absolute inset-0" /> */
+  .bg-grid {
+    pointer-events: none;
+    background-image:
+      linear-gradient(to right, rgb(255 255 255 / 0.045) 1px, transparent 1px),
+      linear-gradient(to bottom, rgb(255 255 255 / 0.045) 1px, transparent 1px);
+    background-size: 56px 56px;
+    -webkit-mask-image: radial-gradient(ellipse 70% 65% at 50% 0%, #000 30%, transparent 75%);
+    mask-image: radial-gradient(ellipse 70% 65% at 50% 0%, #000 30%, transparent 75%);
+  }
+
+  /* Loading placeholder with a slow sheen (static under reduced motion). */
+  .skeleton {
+    background-color: rgb(var(--surface-2));
+    background-image: linear-gradient(
+      100deg,
+      transparent 20%,
+      rgb(255 255 255 / 0.045) 40%,
+      rgb(255 255 255 / 0.045) 60%,
+      transparent 80%
+    );
+    background-size: 200% 100%;
+    background-repeat: no-repeat;
+    border-radius: 0.5rem;
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .skeleton {
+      animation: shimmer 1.6s linear infinite;
+    }
   }
 }
 
 @layer utilities {
+  /* Hide a scrollbar but keep scrolling (sideways chip rows on phones). */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Fade the edges of a horizontally scrolling row. */
+  .mask-fade-x {
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 24px), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 16px, #000 calc(100% - 24px), transparent);
+  }
+
+  .text-gradient-accent {
+    background-image: linear-gradient(180deg, rgb(var(--fg)) 30%, rgb(var(--accent-hover)) 130%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  /* Back-compat with the old global class. */
   .animate-slide-up {
-    animation: slideUp 0.3s ease-out;
+    animation: slide-up 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
+}
 
-  @keyframes slideUp {
-    from {
-      transform: translateY(20px);
-      opacity: 0;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
-    }
+@keyframes shimmer {
+  from {
+    background-position: 150% 0;
   }
+  to {
+    background-position: -50% 0;
+  }
+}
 
-  .skeleton {
-    @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
   }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Motion off when the visitor asks for it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ----------------------------------------------------------------------------
+   dapp-kit (real-mode ConnectButton and its modal) on the SuiMart palette.
+   dapp-kit injects its light theme on [data-dapp-kit]; this selector wins.
+---------------------------------------------------------------------------- */
+html [data-dapp-kit] {
+  --dapp-kit-backgroundColors-primaryButton: rgb(var(--accent));
+  --dapp-kit-backgroundColors-primaryButtonHover: rgb(var(--accent-hover));
+  --dapp-kit-backgroundColors-outlineButtonHover: rgb(var(--surface-3));
+  --dapp-kit-backgroundColors-walletItemHover: rgb(var(--surface-3));
+  --dapp-kit-backgroundColors-walletItemSelected: rgb(var(--surface-3));
+  --dapp-kit-backgroundColors-modalOverlay: rgb(var(--bg) / 0.8);
+  --dapp-kit-backgroundColors-modalPrimary: rgb(var(--surface));
+  --dapp-kit-backgroundColors-modalSecondary: rgb(var(--surface-2));
+  --dapp-kit-backgroundColors-iconButton: transparent;
+  --dapp-kit-backgroundColors-iconButtonHover: rgb(var(--surface-3));
+  --dapp-kit-backgroundColors-dropdownMenu: rgb(var(--surface-2));
+  --dapp-kit-backgroundColors-dropdownMenuSeparator: var(--line-strong);
+  --dapp-kit-borderColors-outlineButton: var(--line-strong);
+  --dapp-kit-colors-primaryButton: rgb(var(--accent-fg));
+  --dapp-kit-colors-outlineButton: rgb(var(--fg));
+  --dapp-kit-colors-iconButton: rgb(var(--fg-muted));
+  --dapp-kit-colors-body: rgb(var(--fg));
+  --dapp-kit-colors-bodyMuted: rgb(var(--fg-muted));
+  --dapp-kit-colors-bodyDanger: rgb(var(--danger));
+  --dapp-kit-radii-small: 8px;
+  --dapp-kit-radii-medium: 10px;
+  --dapp-kit-radii-large: 14px;
+  --dapp-kit-radii-xlarge: 16px;
+  --dapp-kit-shadows-primaryButton: inset 0 1px 0 0 rgb(255 255 255 / 0.22);
+  --dapp-kit-blurs-modalOverlay: blur(6px);
+  --dapp-kit-fontSizes-small: 13px;
+  --dapp-kit-fontSizes-medium: 14px;
+  --dapp-kit-typography-fontFamily: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
